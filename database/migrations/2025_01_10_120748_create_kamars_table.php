@@ -13,10 +13,8 @@ return new class extends Migration
     {
         Schema::create('kamar', function (Blueprint $table) {
             $table->id('id_kamar'); // Primary key
-            $table->string('nomor_kamar', 10);
             $table->string('tipe_kamar');
-            $table->integer('jumlah_unit');
-            $table->enum('status', ['tersedia', 'terisi'])->nullable();
+            // $table->integer('jumlah_unit');
             $table->decimal('harga_sewa', 15, 2);
             $table->decimal('harga_sewa1', 15, 2)->nullable();
             $table->decimal('harga_sewa2', 15, 2)->nullable();

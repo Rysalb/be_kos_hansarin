@@ -14,13 +14,13 @@ return new class extends Migration
         Schema::create('penyewa', function (Blueprint $table) {
             $table->id('id_penyewa');
             $table->foreignId('id_user')->constrained('users', 'id_user');
-            $table->foreignId('id_kamar')->constrained('kamar', 'id_kamar');
+            $table->foreignId('id_unit')->constrained('unit_kamar', 'id_unit');
             $table->string('nik', 16);
             $table->string('foto_ktp');
             $table->text('alamat_asal');
             $table->date('tanggal_masuk');
             $table->integer('durasi_sewa');
-            $table->integer('nomor_wa');
+            $table->string('nomor_wa');
             $table->date('tanggal_keluar');
             $table->enum('status_penyewa', ['aktif', 'tidak_aktif']);
             $table->timestamps();

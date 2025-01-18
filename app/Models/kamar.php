@@ -11,20 +11,21 @@ class Kamar extends Model
 
     // Nama tabel yang digunakan oleh model
     protected $table = 'kamar';
+    protected $primaryKey = 'id_kamar';
 
     // Kolom yang dapat diisi secara massal
     protected $fillable = [
-        'nomor_kamar',
+        // 'nomor_kamar',
         'tipe_kamar',
-        'status',
+        // 'status',
         'harga_sewa',
         'harga_sewa1',
         'harga_sewa2',
         'harga_sewa3',
         'harga_sewa4',
-        'jumlah_unit',
-        'fasilitas',
-        'deskripsi',
+        // 'jumlah_unit',
+        // 'fasilitas',
+        // 'deskripsi',
     ];
 
     // Jika Anda ingin menambahkan relasi, Anda bisa menambahkannya di sini
@@ -33,4 +34,9 @@ class Kamar extends Model
     // {
     //     return $this->hasOne(Penyewa::class, 'id_kamar', 'id_kamar');
     // }
+
+    public function unit_kamar()
+    {
+        return $this->hasMany(Unit_Kamar::class, 'id_kamar', 'id_kamar');
+    }
 }

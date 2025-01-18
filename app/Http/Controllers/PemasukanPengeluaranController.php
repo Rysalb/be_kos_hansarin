@@ -2,87 +2,335 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\PemasukanPengeluaran;
+use App\Models\Pemasukan_Pengeluaran;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Exception;
 
 class PemasukanPengeluaranController extends Controller
 {
     // Mendapatkan semua transaksi
     public function getAll()
     {
-        $transaksi = PemasukanPengeluaran::orderBy('tanggal', 'desc')->get();
-        return response()->json($transaksi, 200);
+        try {
+            $transaksi = Pemasukan_Pengeluaran::orderBy('tanggal', 'desc')->get();
+            return response()->json([
+                'message' => 'Berhasil mendapatkan data transaksi',
+                'data' => $transaksi
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Gagal mendapatkan data transaksi',
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    // Mendapatkan transaksi by ID
+    public function getById($id)
+    {
+        try {
+            $transaksi = Pemasukan_Pengeluaran::findOrFail($id);
+            return response()->json([
+                'message' => 'Berhasil mendapatkan data transaksi',
+                'data' => $transaksi
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Gagal mendapatkan data transaksi',
+                'error' => $e->getMessage()
+            ], 404);
+        }
     }
 
     // Membuat transaksi baru
     public function create(Request $request)
     {
-        $request->validate([
-            'jenis_transaksi' => 'required|in:pemasukan,pengeluaran',
-            'kategori' => 'required|string',
-            'tanggal' => 'required|date',
-            'jumlah' => 'required|numeric',
+        try {
+            DB::beginTransaction();
+
+            $validated = $request->validate([
+                'jenis_transaksi' => 'required|in:pemasukan,pengeluaran',
+                'kategori' => 'required|string',
+                'tanggal' => 'required|date',
+                'jumlah' => 'required|numeric',
+                'keterangan' => 'nullable|string',
+                'bukti_transaksi' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
+            ]);
+
+            // Upload bukti transaksi jika ada
+            if ($request->hasFile('bukti_transaksi')) {
+                $filePath = $request->file('bukti_transaksi')->store('bukti-transaksi', 'public');
+                $validated['bukti_transaksi'] = 'storage/' . $filePath;
+            }
+
+            // Tambahkan bulan dan tahun dari tanggal
+            $tanggal = date('Y-m-d', strtotime($validated['tanggal']));
+            $validated['bulan'] = date('n', strtotime($tanggal));
+            $validated['tahun'] = date('Y', strtotime($tanggal));
+
+            // Hitung saldo
+            $saldoSebelumnya = Pemasukan_Pengeluaran::latest()->value('saldo') ?? 0;
+            $validated['saldo'] = $validated['jenis_transaksi'] === 'pemasukan' 
+                ? $saldoSebelumnya + $validated['jumlah']
+                : $saldoSebelumnya - $validated['jumlah'];
+
+            $transaksi = Pemasukan_Pengeluaran::create($validated);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Transaksi berhasil dibuat',
+                'data' => $transaksi
+            ], 201);
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Gagal membuat transaksi',
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    // Update transaksi
+    public function update(Request $request, $id)
+{
+    try {
+        DB::beginTransaction();
+
+        $transaksi = Pemasukan_Pengeluaran::findOrFail($id);
+        
+        // Simpan bukti_transaksi yang ada sebelumnya
+        $existingBuktiTransaksi = $transaksi->bukti_transaksi;
+
+        $validated = $request->validate([
+            'jenis_transaksi' => 'sometimes|required|in:pemasukan,pengeluaran',
+            'kategori' => 'sometimes|required|string',
+            'tanggal' => 'sometimes|required|date',
+            'jumlah' => 'sometimes|required|numeric',
             'keterangan' => 'nullable|string',
-            'bukti_transaksi' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
+            'bukti_transaksi' => 'nullable|image|mimes:jpeg,png,jpg|max:10000'
         ]);
 
+        // Upload bukti transaksi baru jika ada
         if ($request->hasFile('bukti_transaksi')) {
-            $bukti = $request->file('bukti_transaksi');
-            $path = $bukti->store('public/transaksi');
-            $bukti_path = Storage::url($path);
-            $request->merge(['bukti_transaksi' => $bukti_path]);
+            // Hapus bukti transaksi lama
+            if ($transaksi->bukti_transaksi) {
+                Storage::delete(str_replace('storage/', 'public/', $transaksi->bukti_transaksi));
+            }
+            
+            $filePath = $request->file('bukti_transaksi')->store('bukti-transaksi', 'public');
+            $validated['bukti_transaksi'] = 'storage/' . $filePath;
+        } else {
+            // Jika tidak ada file baru diupload, pertahankan bukti transaksi yang lama
+            $validated['bukti_transaksi'] = $existingBuktiTransaksi;
+        }
+        
+
+        // Update bulan dan tahun hanya jika tanggal diupdate
+        if (isset($validated['tanggal'])) {
+            $tanggal = date('Y-m-d', strtotime($validated['tanggal']));
+            $validated['bulan'] = date('n', strtotime($tanggal));
+            $validated['tahun'] = date('Y', strtotime($tanggal));
         }
 
-        $transaksi = PemasukanPengeluaran::create($request->all());
+        // Update transaksi
+        $transaksi->update($validated);
 
-        return response()->json($transaksi, 201);
+        // Recalculate saldo for all subsequent transactions
+        $subsequentTransaksi = Pemasukan_Pengeluaran::where('id_transaksi', '>=', $id)
+            ->orderBy('tanggal', 'asc')
+            ->orderBy('id_transaksi', 'asc')
+            ->get();
+
+        $saldo = $transaksi->id_transaksi === 1 ? 0 : 
+            Pemasukan_Pengeluaran::where('id_transaksi', '<', $id)
+                ->latest('id_transaksi')
+                ->value('saldo');
+
+        foreach ($subsequentTransaksi as $trans) {
+            $saldo = $trans->jenis_transaksi === 'pemasukan' 
+                ? $saldo + $trans->jumlah 
+                : $saldo - $trans->jumlah;
+            $trans->update(['saldo' => $saldo]);
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'message' => 'Transaksi berhasil diupdate',
+            'data' => $transaksi
+        ], 200);
+
+    } catch (Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'message' => 'Gagal mengupdate transaksi',
+            'error' => $e->getMessage()
+        ], 400);
+    }
+}
+
+    // Delete transaksi
+    public function delete($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            $transaksi = Pemasukan_Pengeluaran::findOrFail($id);
+
+            // Hapus bukti transaksi jika ada
+            if ($transaksi->bukti_transaksi) {
+                Storage::delete(str_replace('storage/', 'public/', $transaksi->bukti_transaksi));
+            }
+
+            // Recalculate saldo for subsequent transactions
+            $subsequentTransaksi = Pemasukan_Pengeluaran::where('id', '>', $id)
+                ->orderBy('tanggal', 'asc')
+                ->orderBy('id', 'asc')
+                ->get();
+
+            $saldo = $id === 1 ? 0 : Pemasukan_Pengeluaran::where('id', '<', $id)->latest()->value('saldo');
+
+            foreach ($subsequentTransaksi as $trans) {
+                $saldo = $trans->jenis_transaksi === 'pemasukan' 
+                    ? $saldo + $trans->jumlah 
+                    : $saldo - $trans->jumlah;
+                $trans->update(['saldo' => $saldo]);
+            }
+
+            $transaksi->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Transaksi berhasil dihapus'
+            ], 200);
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Gagal menghapus transaksi',
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    // Mendapatkan rekap harian
+    public function getRekapHarian($tanggal)
+    {
+        try {
+            $transaksi = Pemasukan_Pengeluaran::whereDate('tanggal', $tanggal)->get();
+
+            $totalPemasukan = $transaksi->where('jenis_transaksi', 'pemasukan')->sum('jumlah');
+            $totalPengeluaran = $transaksi->where('jenis_transaksi', 'pengeluaran')->sum('jumlah');
+            $saldoAkhir = $transaksi->last() ? $transaksi->last()->saldo : 0;
+
+            return response()->json([
+                'message' => 'Berhasil mendapatkan rekap harian',
+                'data' => [
+                    'tanggal' => $tanggal,
+                    'total_pemasukan' => $totalPemasukan,
+                    'total_pengeluaran' => $totalPengeluaran,
+                    'saldo_akhir' => $saldoAkhir,
+                    'detail_transaksi' => $transaksi
+                ]
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Gagal mendapatkan rekap harian',
+                'error' => $e->getMessage()
+            ], 400);
+        }
     }
 
     // Mendapatkan rekap bulanan
     public function getRekapBulanan($bulan, $tahun)
     {
-        $transaksi = PemasukanPengeluaran::where('bulan', $bulan)
-            ->where('tahun', $tahun)
-            ->get();
+        try {
+            $transaksi = Pemasukan_Pengeluaran::where('bulan', $bulan)
+                ->where('tahun', $tahun)
+                ->get();
 
-        $totalPemasukan = $transaksi->where('jenis_transaksi', 'pemasukan')->sum('jumlah');
-        $totalPengeluaran = $transaksi->where('jenis_transaksi', 'pengeluaran')->sum('jumlah');
-        $saldoAkhir = $transaksi->last() ? $transaksi->last()->saldo : 0;
+            $totalPemasukan = $transaksi->where('jenis_transaksi', 'pemasukan')->sum('jumlah');
+            $totalPengeluaran = $transaksi->where('jenis_transaksi', 'pengeluaran')->sum('jumlah');
+            $saldoAkhir = $transaksi->last() ? $transaksi->last()->saldo : 0;
 
-        return response()->json([
-            'bulan' => $bulan,
-            'tahun' => $tahun,
-            'total_pemasukan' => $totalPemasukan,
-            'total_pengeluaran' => $totalPengeluaran,
-            'saldo_akhir' => $saldoAkhir,
-            'detail_transaksi' => $transaksi
-        ], 200);
+            // Rekap per kategori
+            $rekapKategori = [];
+            foreach ($transaksi->groupBy('kategori') as $kategori => $trans) {
+                $rekapKategori[] = [
+                    'kategori' => $kategori,
+                    'total_pemasukan' => $trans->where('jenis_transaksi', 'pemasukan')->sum('jumlah'),
+                    'total_pengeluaran' => $trans->where('jenis_transaksi', 'pengeluaran')->sum('jumlah')
+                ];
+            }
+
+            return response()->json([
+                'message' => 'Berhasil mendapatkan rekap bulanan',
+                'data' => [
+                    'bulan' => $bulan,
+                    'tahun' => $tahun,
+                    'total_pemasukan' => $totalPemasukan,
+                    'total_pengeluaran' => $totalPengeluaran,
+                    'saldo_akhir' => $saldoAkhir,
+                    'rekap_kategori' => $rekapKategori,
+                    'detail_transaksi' => $transaksi
+                ]
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Gagal mendapatkan rekap bulanan',
+                'error' => $e->getMessage()
+            ], 400);
+        }
     }
 
     // Mendapatkan rekap tahunan
     public function getRekapTahunan($tahun)
     {
-        $transaksi = PemasukanPengeluaran::where('tahun', $tahun)
-            ->get();
+        try {
+            $transaksi = Pemasukan_Pengeluaran::where('tahun', $tahun)->get();
 
-        $rekapBulanan = [];
-        for ($i = 1; $i <= 12; $i++) {
-            $transaksiBulan = $transaksi->where('bulan', $i);
-            $rekapBulanan[] = [
-                'bulan' => $i,
-                'total_pemasukan' => $transaksiBulan->where('jenis_transaksi', 'pemasukan')->sum('jumlah'),
-                'total_pengeluaran' => $transaksiBulan->where('jenis_transaksi', 'pengeluaran')->sum('jumlah'),
-                'saldo_akhir' => $transaksiBulan->last() ? $transaksiBulan->last()->saldo : 0
-            ];
+            $rekapBulanan = [];
+            for ($i = 1; $i <= 12; $i++) {
+                $transaksiBulan = $transaksi->where('bulan', $i);
+                $rekapBulanan[] = [
+                    'bulan' => $i,
+                    'total_pemasukan' => $transaksiBulan->where('jenis_transaksi', 'pemasukan')->sum('jumlah'),
+                    'total_pengeluaran' => $transaksiBulan->where('jenis_transaksi', 'pengeluaran')->sum('jumlah'),
+                    'saldo_akhir' => $transaksiBulan->last() ? $transaksiBulan->last()->saldo : 0
+                ];
+            }
+
+            // Rekap per kategori tahunan
+            $rekapKategori = [];
+            foreach ($transaksi->groupBy('kategori') as $kategori => $trans) {
+                $rekapKategori[] = [
+                    'kategori' => $kategori,
+                    'total_pemasukan' => $trans->where('jenis_transaksi', 'pemasukan')->sum('jumlah'),
+                    'total_pengeluaran' => $trans->where('jenis_transaksi', 'pengeluaran')->sum('jumlah')
+                ];
+            }
+
+            return response()->json([
+                'message' => 'Berhasil mendapatkan rekap tahunan',
+                'data' => [
+                    'tahun' => $tahun,
+                    'total_pemasukan_tahunan' => $transaksi->where('jenis_transaksi', 'pemasukan')->sum('jumlah'),
+                    'total_pengeluaran_tahunan' => $transaksi->where('jenis_transaksi', 'pengeluaran')->sum('jumlah'),
+                    'saldo_akhir_tahun' => $transaksi->last() ? $transaksi->last()->saldo : 0,
+                    'rekap_bulanan' => $rekapBulanan,
+                    'rekap_kategori' => $rekapKategori
+                ]
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Gagal mendapatkan rekap tahunan',
+                'error' => $e->getMessage()
+            ], 400);
         }
-
-        return response()->json([
-            'tahun' => $tahun,
-            'rekap_bulanan' => $rekapBulanan,
-            'total_pemasukan_tahunan' => $transaksi->where('jenis_transaksi', 'pemasukan')->sum('jumlah'),
-            'total_pengeluaran_tahunan' => $transaksi->where('jenis_transaksi', 'pengeluaran')->sum('jumlah'),
-            'saldo_akhir_tahun' => $transaksi->last() ? $transaksi->last()->saldo : 0
-        ], 200);
     }
 }

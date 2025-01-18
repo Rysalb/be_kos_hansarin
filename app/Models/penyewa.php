@@ -11,7 +11,7 @@ class Penyewa extends Model
 
     protected $fillable = [
         'id_user',
-        'id_kamar',
+        'id_unit',
         'nik',
         'foto_ktp',
         'alamat_asal',
@@ -22,15 +22,13 @@ class Penyewa extends Model
         'nomor_wa'
     ];
 
-    // Relasi dengan model User
     public function user()
     {
         return $this->belongsTo(User::class, 'id_user', 'id_user');
     }
 
-    // // Relasi dengan model Kamar
-    public function kamar()
+    public function unit_kamar()
     {
-        return $this->belongsTo(Kamar::class, 'id_kamar', 'id_kamar');
+        return $this->belongsTo(Unit_Kamar::class, 'id_unit', 'id_unit');
     }
 }

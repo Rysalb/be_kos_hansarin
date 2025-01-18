@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class PemasukanPengeluaran extends Model
+class Pemasukan_Pengeluaran extends Model
 {
     protected $table = 'pemasukan_pengeluaran';
     protected $primaryKey = 'id_transaksi';
@@ -14,11 +14,11 @@ class PemasukanPengeluaran extends Model
         'jenis_transaksi',
         'kategori',
         'tanggal',
+        'bulan',
+        'tahun',
         'jumlah',
         'keterangan',
         'bukti_transaksi',
-        'bulan',
-        'tahun',
         'saldo'
     ];
 
