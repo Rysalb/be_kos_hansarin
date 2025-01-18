@@ -60,7 +60,7 @@ class AuthController extends Controller
                 'message' => 'Login successful',
                 'token' => $token,
                 'user' => [
-                    'id' => $user->id,
+                    'id' => $user->id_user,
                     'name' => $user->name,
                     'email' => $user->email,
                     'role' => $user->role,
@@ -71,7 +71,7 @@ class AuthController extends Controller
         return response()->json([
             'status' => false,
             'message' => 'Invalid credentials'
-        ], 401);
+        ],401);
     }
 
     public function logout(Request $request)

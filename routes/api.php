@@ -11,6 +11,7 @@ use App\Http\Controllers\PesananMakananController;
 use App\Http\Controllers\NomorPentingController;
 use App\Http\Controllers\KategoriKamarController;
 // Public routes
+
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
