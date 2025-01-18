@@ -187,12 +187,12 @@ class PemasukanPengeluaranController extends Controller
             }
 
             // Recalculate saldo for subsequent transactions
-            $subsequentTransaksi = Pemasukan_Pengeluaran::where('id', '>', $id)
+            $subsequentTransaksi = Pemasukan_Pengeluaran::where('id_transaksi', '>', $id)
                 ->orderBy('tanggal', 'asc')
-                ->orderBy('id', 'asc')
+                ->orderBy('id_transaksi', 'asc')
                 ->get();
 
-            $saldo = $id === 1 ? 0 : Pemasukan_Pengeluaran::where('id', '<', $id)->latest()->value('saldo');
+            $saldo = $id === 1 ? 0 : Pemasukan_Pengeluaran::where('id_transaksi', '<', $id)->latest()->value('saldo');
 
             foreach ($subsequentTransaksi as $trans) {
                 $saldo = $trans->jenis_transaksi === 'pemasukan' 

@@ -174,65 +174,95 @@ class PenyewaController extends Controller
     }
 
     public function update(Request $request, $id_penyewa)
-    {
-        try {
-            DB::beginTransaction();
+{
+    try {
+        DB::beginTransaction();
 
-            $penyewa = Penyewa::findOrFail($id_penyewa);
+        // Cari data penyewa
+        $penyewa = Penyewa::findOrFail($id_penyewa);
 
-            $validated = $request->validate([
-                'id_user' => 'sometimes|exists:users,id_user',
-                'id_kamar' => 'sometimes|exists:kamar,id_kamar',
-                'id_unit' => 'sometimes|exists:unit_kamar,id_unit',
-                'nik' => 'sometimes|string|size:16',
-                'foto_ktp' => 'sometimes|image|mimes:jpeg,png,jpg|max:2048',
-                'alamat_asal' => 'sometimes|string',
-                'tanggal_masuk' => 'sometimes|date',
-                'durasi_sewa' => 'sometimes|integer',
-                'nomor_wa' => 'sometimes|string',
-                'tanggal_keluar' => 'sometimes|date|after:tanggal_masuk',
-                'status_penyewa' => 'sometimes|in:aktif,tidak_aktif'
-            ]);
+        // Validasi request
+        $rules = [
+            'id_user' => 'sometimes|exists:users,id_user',
+            'id_kamar' => 'sometimes|exists:kamar,id_kamar',
+            'id_unit' => 'sometimes|exists:unit_kamar,id_unit',
+            'nik' => 'sometimes|string|size:16',
+            'foto_ktp' => 'sometimes|image|mimes:jpeg,png,jpg|max:2048',
+            'alamat_asal' => 'sometimes|string',
+            'tanggal_masuk' => 'sometimes|date',
+            'durasi_sewa' => 'sometimes|integer',
+            'nomor_wa' => 'sometimes|string',
+            'tanggal_keluar' => 'sometimes|date|after:tanggal_masuk',
+            'status_penyewa' => 'sometimes|in:aktif,tidak_aktif'
+        ];
 
-            if ($request->hasFile('foto_ktp')) {
-                // Hapus foto lama
-                if ($penyewa->foto_ktp) {
-                    Storage::delete(str_replace('storage/', 'public/', $penyewa->foto_ktp));
-                }
-                
-                // Upload foto baru
-                $filePath = $request->file('foto_ktp')->store('ktp', 'public');
-                $validated['foto_ktp'] = 'storage/' . $filePath;
+        $validated = $request->validate($rules);
+
+        // Data yang akan diupdate
+        $dataToUpdate = [];
+
+        // Handle setiap field yang ada dalam request
+        foreach ($validated as $key => $value) {
+            if ($request->has($key)) {
+                $dataToUpdate[$key] = $value;
             }
-
-            // Jika ada perubahan unit
-            if (isset($validated['id_unit']) && $validated['id_unit'] !== $penyewa->id_unit) {
-                // Set unit lama menjadi tersedia
-                Unit_Kamar::where('id_unit', $penyewa->id_unit)
-                         ->update(['status' => 'tersedia']);
-
-                // Set unit baru menjadi dihuni
-                Unit_Kamar::where('id_unit', $validated['id_unit'])
-                         ->update(['status' => 'dihuni']);
-            }
-
-            $penyewa->update($validated);
-
-            DB::commit();
-
-            return response()->json([
-                'message' => 'Data penyewa berhasil diupdate',
-                'data' => $penyewa->load('unit_kamar.kamar')
-            ], 200);
-
-        } catch (Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'message' => 'Gagal mengupdate data penyewa',
-                'error' => $e->getMessage()
-            ], 400);
         }
+
+        // Handle foto KTP khusus
+        if ($request->hasFile('foto_ktp')) {
+            // Hapus foto lama
+            if ($penyewa->foto_ktp) {
+                $oldPath = str_replace('storage/', 'public/', $penyewa->foto_ktp);
+                if (Storage::exists($oldPath)) {
+                    Storage::delete($oldPath);
+                }
+            }
+            
+            // Upload dan simpan foto baru
+            $file = $request->file('foto_ktp');
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $filePath = $file->storeAs('public/ktp', $fileName);
+            
+            $dataToUpdate['foto_ktp'] = 'storage/ktp/' . $fileName;
+        }
+
+        // Handle perubahan unit kamar
+        if (isset($dataToUpdate['id_unit']) && $dataToUpdate['id_unit'] !== $penyewa->id_unit) {
+            // Update status unit lama
+            Unit_Kamar::where('id_unit', $penyewa->id_unit)
+                     ->update(['status' => 'tersedia']);
+
+            // Update status unit baru
+            Unit_Kamar::where('id_unit', $dataToUpdate['id_unit'])
+                     ->update(['status' => 'dihuni']);
+        }
+
+        // Update data penyewa
+        $penyewa->update($dataToUpdate);
+
+        DB::commit();
+
+        // Load relasi untuk response
+        $penyewa->load('unit_kamar.kamar', 'user');
+
+        return response()->json([
+            'message' => 'Data penyewa berhasil diupdate',
+            'data' => $penyewa
+        ], 200);
+
+    } catch (Exception $e) {
+        DB::rollBack();
+        
+        // Log error untuk debugging
+        \Log::error('Error updating penyewa: ' . $e->getMessage());
+        \Log::error('Stack trace: ' . $e->getTraceAsString());
+
+        return response()->json([
+            'message' => 'Gagal mengupdate data penyewa',
+            'error' => $e->getMessage()
+        ], 400);
     }
+}
 
     public function delete($id_penyewa)
     {

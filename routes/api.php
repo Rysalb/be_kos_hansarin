@@ -37,7 +37,7 @@ Route::prefix('penyewa')->group(function () {
     Route::get('/kategori-kamar/list', [PenyewaController::class, 'getKategoriKamar']); // Route baru
     Route::get('/unit-tersedia/{id_kamar}', [PenyewaController::class, 'getUnitTersedia']); // Route baru
     Route::post('/create', [PenyewaController::class, 'create']);
-    Route::put('/update/{id_penyewa}', [PenyewaController::class, 'update']);
+    Route::post('/update/{id_penyewa}', [PenyewaController::class, 'update']);
     Route::delete('/delete/{id_penyewa}', [PenyewaController::class, 'delete']);
 });
 
@@ -53,7 +53,7 @@ Route::prefix('pemasukan-pengeluaran')->group(function () {
     Route::get('/get/all', [PemasukanPengeluaranController::class, 'getAll']);
     Route::get('/getby/{id}', [PemasukanPengeluaranController::class, 'getById']);
     Route::post('/create', [PemasukanPengeluaranController::class, 'create']);
-    Route::put('/update/{id}', [PemasukanPengeluaranController::class, 'update']);
+    Route::post('/update/{id}', [PemasukanPengeluaranController::class, 'update']);
     Route::delete('/delete/{id}', [PemasukanPengeluaranController::class, 'delete']);
     Route::get('/rekap-harian/{tanggal}', [PemasukanPengeluaranController::class, 'getRekapHarian']);
     Route::get('/rekap-bulanan/{bulan}/{tahun}', [PemasukanPengeluaranController::class, 'getRekapBulanan']);
