@@ -19,11 +19,13 @@ class User extends Authenticatable
     use Notifiable;
     use TwoFactorAuthenticatable;
 
+    protected $primaryKey = 'id_user';
     protected $fillable = [
         'name',
         'email',
         'password',
         'role',
+        'status_verifikasi'
     ];
 
     protected $hidden = [

@@ -14,12 +14,23 @@ use App\Http\Controllers\KategoriKamarController;
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
+Route::post('/register-admin', [AuthController::class, 'registerAdmin']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+    Route::post('/verifikasi-user/{userId}', [AuthController::class, 'verifikasiUser'])
+        ->middleware('role:admin');
     
+    Route::delete('/user/{userId}', [AuthController::class, 'deleteUser'])
+    ->middleware('role:admin'); // Pastikan hanya admin yang bisa mengakses
+
+    Route::get('/users/role/{role}', [AuthController::class, 'getUsersByRole'])
+    ->middleware('role:admin'); // Pastikan hanya admin yang bisa mengakses
+    
+    Route::get('/user/{userId}', [AuthController::class, 'getUserById'])
+    ->middleware('role:admin'); // Pastikan hanya admin yang bisa mengakses
     // Add other protected routes here
 });
 
