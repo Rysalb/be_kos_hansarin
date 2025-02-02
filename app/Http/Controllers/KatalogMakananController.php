@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\KatalogMakanan;
+use App\Models\Katalog_Makanan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -11,14 +11,14 @@ class KatalogMakananController extends Controller
     // Mendapatkan semua data makanan
     public function getAll()
     {
-        $makanan = KatalogMakanan::all();
+        $makanan = Katalog_Makanan::all();
         return response()->json($makanan, 200);
     }
 
     // Mendapatkan detail makanan berdasarkan ID
     public function getById($id_makanan)
     {
-        $makanan = KatalogMakanan::findOrFail($id_makanan);
+        $makanan = Katalog_Makanan::findOrFail($id_makanan);
         return response()->json($makanan, 200);
     }
 
@@ -41,7 +41,7 @@ class KatalogMakananController extends Controller
             $foto_path = Storage::url($path);
         }
 
-        $makanan = KatalogMakanan::create([
+        $makanan = Katalog_Makanan::create([
             'nama_makanan' => $request->nama_makanan,
             'harga' => $request->harga,
             'kategori' => $request->kategori,
@@ -56,7 +56,7 @@ class KatalogMakananController extends Controller
     // Mengupdate data makanan
     public function update(Request $request, $id_makanan)
     {
-        $makanan = KatalogMakanan::findOrFail($id_makanan);
+        $makanan = Katalog_Makanan::findOrFail($id_makanan);
 
         $request->validate([
             'nama_makanan' => 'sometimes|required|string|max:100',
@@ -87,7 +87,7 @@ class KatalogMakananController extends Controller
     // Menghapus data makanan
     public function delete($id_makanan)
     {
-        $makanan = KatalogMakanan::findOrFail($id_makanan);
+        $makanan = Katalog_Makanan::findOrFail($id_makanan);
         
         // Hapus foto makanan dari storage
         Storage::delete(str_replace('/storage', 'public', $makanan->foto_makanan));
@@ -104,7 +104,7 @@ class KatalogMakananController extends Controller
             'status' => 'required|in:tersedia,tidak_tersedia'
         ]);
 
-        $makanan = KatalogMakanan::findOrFail($id_makanan);
+        $makanan = Katalog_Makanan::findOrFail($id_makanan);
         $makanan->update([
             'status' => $request->status
         ]);

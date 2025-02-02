@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class PesananMakanan extends Model
+class Pesanan_Makanan extends Model
 {
     protected $table = 'pesanan_makanan';
     protected $primaryKey = 'id_pesanan';
@@ -27,6 +27,6 @@ class PesananMakanan extends Model
     // Relasi dengan model KatalogMakanan
     public function makanan()
     {
-        return $this->belongsTo(KatalogMakanan::class, 'id_makanan', 'id_makanan');
+        return $this->belongsTo(Katalog_Makanan::class, 'id_makanan', 'id_makanan');
     }
 }

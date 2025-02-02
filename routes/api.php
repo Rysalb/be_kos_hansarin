@@ -62,39 +62,39 @@ Route::prefix('pemasukan-pengeluaran')->group(function () {
 });
 
 Route::prefix('pembayaran')->group(function () {
-    Route::get('/', [PembayaranController::class, 'getAll']);
+    Route::get('/get/all', [PembayaranController::class, 'getAll']);
     Route::get('/{id_pembayaran}', [PembayaranController::class, 'getById']);
-    Route::post('/', [PembayaranController::class, 'create']);
-    Route::put('/{id_pembayaran}', [PembayaranController::class, 'update']);
-    Route::delete('/{id_pembayaran}', [PembayaranController::class, 'delete']);
-    Route::put('/{id_pembayaran}/verifikasi', [PembayaranController::class, 'verifikasi']);
+    Route::post('/create', [PembayaranController::class, 'create']);
+    Route::post('/update/{id_pembayaran}', [PembayaranController::class, 'update']);
+    Route::delete('/delete/{id_pembayaran}', [PembayaranController::class, 'delete']);
+    // Route::put('/{id_pembayaran}/verifikasi', [PembayaranController::class, 'verifikasi']);
 });
 
 
 Route::prefix('katalog-makanan')->group(function () {
-    Route::get('/', [KatalogMakananController::class, 'getAll']);
-    Route::get('/{id_makanan}', [KatalogMakananController::class, 'getById']);
-    Route::post('/', [KatalogMakananController::class, 'create']);
-    Route::put('/{id_makanan}', [KatalogMakananController::class, 'update']);
-    Route::delete('/{id_makanan}', [KatalogMakananController::class, 'delete']);
-    Route::put('/{id_makanan}/status', [KatalogMakananController::class, 'updateStatus']);
+    Route::get('/get/all', [KatalogMakananController::class, 'getAll']);
+    Route::get('/get/{id_makanan}', [KatalogMakananController::class, 'getById']);
+    Route::post('/create', [KatalogMakananController::class, 'create']);
+    Route::post('/update/{id_makanan}', [KatalogMakananController::class, 'update']);
+    Route::delete('/delete/{id_makanan}', [KatalogMakananController::class, 'delete']);
+    // Route::put('/{id_makanan}/status', [KatalogMakananController::class, 'updateStatus']);
 });
 
 Route::prefix('pesanan-makanan')->group(function () {
-    Route::get('/', [PesananMakananController::class, 'getAll']);
-    Route::get('/{id_pesanan}', [PesananMakananController::class, 'getById']);
-    Route::post('/', [PesananMakananController::class, 'create']);
-    Route::put('/{id_pesanan}', [PesananMakananController::class, 'update']);
-    Route::delete('/{id_pesanan}', [PesananMakananController::class, 'delete']);
-    Route::put('/{id_pesanan}/status', [PesananMakananController::class, 'updateStatus']);
+    Route::get('/get/all', [PesananMakananController::class, 'getAll']);
+    Route::get('/get/{id_pesanan}', [PesananMakananController::class, 'getById']);
+    Route::post('/create', [PesananMakananController::class, 'create']);
+    Route::post('/update/{id_pesanan}', [PesananMakananController::class, 'update']);
+    Route::delete('/delete/{id_pesanan}', [PesananMakananController::class, 'delete']);
+    Route::post('/{id_pesanan}/status', [PesananMakananController::class, 'updateStatus']);
     Route::get('/penyewa/{id_penyewa}', [PesananMakananController::class, 'getByPenyewa']);
 });
 
 Route::prefix('nomor-penting')->group(function () {
-    Route::get('/', [NomorPentingController::class, 'getAll']);
-    Route::get('/{id_nomor}', [NomorPentingController::class, 'getById']);
-    Route::post('/', [NomorPentingController::class, 'create']);
-    Route::put('/{id_nomor}', [NomorPentingController::class, 'update']);
-    Route::delete('/{id_nomor}', [NomorPentingController::class, 'delete']);
-    Route::get('/kategori/{kategori}', [NomorPentingController::class, 'getByKategori']);
+    Route::get('/get/all', [NomorPentingController::class, 'getAll']);
+    Route::get('/get/{id_nomor}', [NomorPentingController::class, 'getById']);
+    Route::post('/create', [NomorPentingController::class, 'create']);
+    Route::post('/update/{id_nomor}', [NomorPentingController::class, 'update']);
+    Route::delete('/delete/{id_nomor}', [NomorPentingController::class, 'delete']);
+    // Route::get('/kategori/{kategori}', [NomorPentingController::class, 'getByKategori']);
 });

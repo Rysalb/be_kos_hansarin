@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class NomorPenting extends Model
+class Nomor_Penting extends Model
 {
     protected $table = 'nomor_penting';
     protected $primaryKey = 'id_nomor';

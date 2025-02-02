@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id('id_nomor');
             $table->string('nama_kontak', 100);
             $table->string('nomor_telepon', 15);
-            $table->string('kategori', 50);
+            $table->string('kategori', 50)->nullable();
             $table->text('keterangan')->nullable();
             $table->timestamps();
         });
