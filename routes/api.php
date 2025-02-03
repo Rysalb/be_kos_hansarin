@@ -10,6 +10,7 @@ use App\Http\Controllers\KatalogMakananController;
 use App\Http\Controllers\PesananMakananController;
 use App\Http\Controllers\NomorPentingController;
 use App\Http\Controllers\KategoriKamarController;
+use App\Http\Controllers\UnitKamarController;
 // Public routes
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -55,7 +56,7 @@ Route::prefix('penyewa')->group(function () {
 
 // Route untuk Unit Kamar
 Route::prefix('unit-kamar')->group(function () {
-    Route::get('/{id_kamar}/available', [UnitKamarController::class, 'getAvailableUnits']);
+    Route::get('/available', [UnitKamarController::class, 'getAvailableUnits']);
     Route::put('/{id_unit}/status', [UnitKamarController::class, 'updateStatus']);
 });
 

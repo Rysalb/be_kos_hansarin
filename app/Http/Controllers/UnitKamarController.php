@@ -9,25 +9,7 @@ use Exception;
 
 class UnitKamarController extends Controller
 {
-    public function getAvailableUnits($id_kamar)
-    {
-        try {
-            $units = Unit_Kamar::with('kamar')
-                ->where('id_kamar', $id_kamar)
-                ->where('status', 'tersedia')
-                ->get();
-
-            return response()->json([
-                'message' => 'Berhasil mengambil data unit tersedia',
-                'data' => $units
-            ], 200);
-        } catch (Exception $e) {
-            return response()->json([
-                'message' => 'Gagal mengambil data unit',
-                'error' => $e->getMessage()
-            ], 400);
-        }
-    }
+   
 
     public function updateStatus($id_unit, Request $request)
     {
@@ -44,6 +26,27 @@ class UnitKamarController extends Controller
                 'message' => 'Gagal mengupdate status unit',
                 'error' => $e->getMessage()
             ], 400);
+        }
+    }
+
+    public function getAvailableUnits()
+    {
+        try {
+            $units = Unit_Kamar::with('kamar')
+                ->where('status', 'tersedia')
+                ->get();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Berhasil mengambil data unit tersedia',
+                'data' => $units
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Gagal mengambil data unit',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 }
