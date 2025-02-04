@@ -67,7 +67,7 @@ class KamarController extends Controller
     public function getAll()
     {
         try {
-            $kamar = Kamar::with('kategori')->get();
+            $kamar = Kamar::with('unit_kamar')->get();
             return response()->json([
                 'message' => 'Data kamar berhasil diambil',
                 'data' => $kamar
