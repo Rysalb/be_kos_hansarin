@@ -53,4 +53,9 @@ class User extends Authenticatable
     {
         return $this->role === 'user';
     }
+
+    public function penyewa()
+    {
+        return $this->hasOne(Penyewa::class, 'id_user', 'id_user');
+    }
 }

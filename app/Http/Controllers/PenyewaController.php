@@ -295,4 +295,32 @@ class PenyewaController extends Controller
             ], 400);
         }
     }
+
+    public function getAllUnits()
+    {
+        try {
+            $units = Unit_Kamar::with(['kamar', 'penyewa.user'])
+                ->orderBy('nomor_kamar')
+                ->get()
+                ->map(function ($unit) {
+                    return [
+                        'id_unit' => $unit->id_unit,
+                        'nomor_kamar' => $unit->nomor_kamar,
+                        'status' => $unit->status,
+                        'kamar' => $unit->kamar,
+                        'penyewa' => $unit->penyewa
+                    ];
+                });
+
+            return response()->json([
+                'message' => 'Berhasil mendapatkan data unit kamar',
+                'data' => $units
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Gagal mendapatkan data unit kamar',
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
 }

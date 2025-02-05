@@ -18,11 +18,11 @@ class KamarController extends Controller
             // Validasi request
             $validated = $request->validate([
                 'tipe_kamar' => 'required|string',
-                'harga_sewa' => 'required|numeric',
-                'harga_sewa1' => 'nullable|numeric',
-                'harga_sewa2' => 'nullable|numeric',
-                'harga_sewa3' => 'nullable|numeric',
-                'harga_sewa4' => 'nullable|numeric',
+                'harga_sewa' => 'required|integer',
+                'harga_sewa1' => 'nullable|integer',
+                'harga_sewa2' => 'nullable|integer',
+                'harga_sewa3' => 'nullable|integer',
+                'harga_sewa4' => 'nullable|integer',
                 'jumlah_unit' => 'required|integer|min:1',
             ]);
 
@@ -90,11 +90,11 @@ class KamarController extends Controller
             // Validasi request
             $validated = $request->validate([
                 'tipe_kamar' => 'required|string',
-                'harga_sewa' => 'required|numeric',
-                'harga_sewa1' => 'nullable|numeric',
-                'harga_sewa2' => 'nullable|numeric',
-                'harga_sewa3' => 'nullable|numeric',
-                'harga_sewa4' => 'nullable|numeric',
+                'harga_sewa' => 'required|integer',
+                'harga_sewa1' => 'nullable|integer',
+                'harga_sewa2' => 'nullable|integer',
+                'harga_sewa3' => 'nullable|integer',
+                'harga_sewa4' => 'nullable|integer',
                 'jumlah_unit' => 'sometimes|required|integer|min:1',
             ]);
     
