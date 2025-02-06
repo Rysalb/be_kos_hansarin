@@ -19,7 +19,8 @@ class Penyewa extends Model
         'durasi_sewa',
         'tanggal_keluar',
         'status_penyewa',
-        'nomor_wa'
+        'nomor_wa',
+        'harga_sewa' // Tambahkan field ini
     ];
 
     public function user()

@@ -15,6 +15,7 @@ use Illuminate\Validation\ValidationException;
 use Exception;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;  
+use App\Models\Pemasukan_Pengeluaran;
 
 class AuthController extends Controller
 {
@@ -116,6 +117,7 @@ public function verifikasiUser(Request $request, $userId)
             'status' => 'required|in:disetujui,ditolak',
             'tanggal_masuk' => 'required_if:status,disetujui|date',
             'durasi_sewa' => 'required_if:status,disetujui|integer',
+            'harga_sewa' => 'required_if:status,disetujui|numeric',
         ]);
 
         if ($validator->fails()) {
@@ -141,12 +143,31 @@ public function verifikasiUser(Request $request, $userId)
                 'durasi_sewa' => $request->durasi_sewa,
                 'tanggal_keluar' => Carbon::parse($request->tanggal_masuk)
                     ->addMonths($request->durasi_sewa),
-                'status_penyewa' => 'aktif'
+                'status_penyewa' => 'aktif',
+                'harga_sewa' => $request->harga_sewa
             ]);
 
             // Update status unit kamar
             Unit_Kamar::where('id_unit', $penyewa->id_unit)
                      ->update(['status' => 'dihuni']);
+
+            // Catat pembayaran di pemasukan_pengeluaran
+            $pemasukanPengeluaran = new Pemasukan_Pengeluaran([
+                'jenis_transaksi' => 'pemasukan',
+                'kategori' => 'Pembayaran Sewa',
+                'tanggal' => $request->tanggal_masuk,
+                'jumlah' => $request->harga_sewa,
+                'keterangan' => "Pembayaran sewa kamar {$penyewa->unit_kamar->nomor_kamar} - {$user->name}",
+                'bulan' => Carbon::parse($request->tanggal_masuk)->month,
+                'tahun' => Carbon::parse($request->tanggal_masuk)->year
+            ]);
+
+            // Hitung saldo
+            $lastTransaction = Pemasukan_Pengeluaran::latest('id_transaksi')->first();
+            $currentSaldo = $lastTransaction ? $lastTransaction->saldo : 0;
+            $pemasukanPengeluaran->saldo = $currentSaldo + $request->harga_sewa;
+            
+            $pemasukanPengeluaran->save();
         } else {
             // Jika ditolak, hapus data penyewa
             Storage::delete(str_replace('storage/', 'public/', $penyewa->foto_ktp));
@@ -314,7 +335,7 @@ public function getUsersByRole(Request $request, $role)
     try {
         // Ambil semua pengguna dengan role yang diberikan
         $users = User::where('role', $role)
-            ->with(['penyewa.unit_kamar']) // Mengambil relasi penyewa dan unit_kamar
+            ->with(['penyewa.unit_kamar.kamar']) // Tambahkan relasi dengan kamar
             ->get()
             ->map(function ($user) {
                 return [
@@ -322,8 +343,19 @@ public function getUsersByRole(Request $request, $role)
                     'name' => $user->name,
                     'email' => $user->email,
                     'status_verifikasi' => $user->status_verifikasi,
-                    'nomor_kamar' => $user->penyewa ? $user->penyewa->unit_kamar->nomor_kamar : null, // Ambil nomor_kamar
-                    'nomor_wa' => $user->penyewa ? $user->penyewa->nomor_wa : null, // Ambil nomor_wa
+                    'penyewa' => $user->penyewa ? [
+                        'unit_kamar' => [
+                            'nomor_kamar' => $user->penyewa->unit_kamar->nomor_kamar,
+                            'kamar' => [
+                                'harga_sewa' => $user->penyewa->unit_kamar->kamar->harga_sewa,
+                                'harga_sewa1' => $user->penyewa->unit_kamar->kamar->harga_sewa1,
+                                'harga_sewa2' => $user->penyewa->unit_kamar->kamar->harga_sewa2,
+                                'harga_sewa3' => $user->penyewa->unit_kamar->kamar->harga_sewa3,
+                                'harga_sewa4' => $user->penyewa->unit_kamar->kamar->harga_sewa4,
+                            ]
+                        ],
+                        'nomor_wa' => $user->penyewa->nomor_wa
+                    ] : null,
                 ];
             });
 
