@@ -24,6 +24,11 @@ return new class extends Migration
             $table->decimal('saldo', 10, 2);
             $table->timestamps();
         });
+
+        Schema::table('pemasukan_pengeluaran', function (Blueprint $table) {
+            $table->unsignedBigInteger('id_penyewa')->nullable();
+            $table->foreign('id_penyewa')->references('id_penyewa')->on('penyewa')->onDelete('set null');
+        });
     }
 
     /**
@@ -32,5 +37,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('pemasukan_pengeluarans');
+
+        Schema::table('pemasukan_pengeluaran', function (Blueprint $table) {
+            $table->dropForeign(['id_penyewa']);
+            $table->dropColumn('id_penyewa');
+        });
     }
 };

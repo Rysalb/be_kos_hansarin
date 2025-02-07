@@ -56,8 +56,12 @@ class PemasukanPengeluaranController extends Controller
                 'tanggal' => 'required|date',
                 'jumlah' => 'required|numeric',
                 'keterangan' => 'nullable|string',
+                'id_penyewa' => 'required|exists:penyewa,id_penyewa',
                 'bukti_transaksi' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
             ]);
+
+            // Tambahkan ID Penyewa ke keterangan untuk tracking
+            $validated['keterangan'] = ($validated['keterangan'] ?? '') . ' [ID Penyewa: ' . $validated['id_penyewa'] . ']';
 
             // Upload bukti transaksi jika ada
             if ($request->hasFile('bukti_transaksi')) {
@@ -96,82 +100,82 @@ class PemasukanPengeluaranController extends Controller
 
     // Update transaksi
     public function update(Request $request, $id)
-{
-    try {
-        DB::beginTransaction();
+    {
+        try {
+            DB::beginTransaction();
 
-        $transaksi = Pemasukan_Pengeluaran::findOrFail($id);
-        
-        // Simpan bukti_transaksi yang ada sebelumnya
-        $existingBuktiTransaksi = $transaksi->bukti_transaksi;
+            $transaksi = Pemasukan_Pengeluaran::findOrFail($id);
+            
+            // Simpan bukti_transaksi yang ada sebelumnya
+            $existingBuktiTransaksi = $transaksi->bukti_transaksi;
 
-        $validated = $request->validate([
-            'jenis_transaksi' => 'sometimes|required|in:pemasukan,pengeluaran',
-            'kategori' => 'sometimes|required|string',
-            'tanggal' => 'sometimes|required|date',
-            'jumlah' => 'sometimes|required|numeric',
-            'keterangan' => 'nullable|string',
-            'bukti_transaksi' => 'nullable|image|mimes:jpeg,png,jpg|max:10000'
-        ]);
+            $validated = $request->validate([
+                'jenis_transaksi' => 'sometimes|required|in:pemasukan,pengeluaran',
+                'kategori' => 'sometimes|required|string',
+                'tanggal' => 'sometimes|required|date',
+                'jumlah' => 'sometimes|required|numeric',
+                'keterangan' => 'nullable|string',
+                'bukti_transaksi' => 'nullable|image|mimes:jpeg,png,jpg|max:10000'
+            ]);
 
-        // Upload bukti transaksi baru jika ada
-        if ($request->hasFile('bukti_transaksi')) {
-            // Hapus bukti transaksi lama
-            if ($transaksi->bukti_transaksi) {
-                Storage::delete(str_replace('storage/', 'public/', $transaksi->bukti_transaksi));
+            // Upload bukti transaksi baru jika ada
+            if ($request->hasFile('bukti_transaksi')) {
+                // Hapus bukti transaksi lama
+                if ($transaksi->bukti_transaksi) {
+                    Storage::delete(str_replace('storage/', 'public/', $transaksi->bukti_transaksi));
+                }
+                
+                $filePath = $request->file('bukti_transaksi')->store('bukti-transaksi', 'public');
+                $validated['bukti_transaksi'] = 'storage/' . $filePath;
+            } else {
+                // Jika tidak ada file baru diupload, pertahankan bukti transaksi yang lama
+                $validated['bukti_transaksi'] = $existingBuktiTransaksi;
             }
             
-            $filePath = $request->file('bukti_transaksi')->store('bukti-transaksi', 'public');
-            $validated['bukti_transaksi'] = 'storage/' . $filePath;
-        } else {
-            // Jika tidak ada file baru diupload, pertahankan bukti transaksi yang lama
-            $validated['bukti_transaksi'] = $existingBuktiTransaksi;
+
+            // Update bulan dan tahun hanya jika tanggal diupdate
+            if (isset($validated['tanggal'])) {
+                $tanggal = date('Y-m-d', strtotime($validated['tanggal']));
+                $validated['bulan'] = date('n', strtotime($tanggal));
+                $validated['tahun'] = date('Y', strtotime($tanggal));
+            }
+
+            // Update transaksi
+            $transaksi->update($validated);
+
+            // Recalculate saldo for all subsequent transactions
+            $subsequentTransaksi = Pemasukan_Pengeluaran::where('id_transaksi', '>=', $id)
+                ->orderBy('tanggal', 'asc')
+                ->orderBy('id_transaksi', 'asc')
+                ->get();
+
+            $saldo = $transaksi->id_transaksi === 1 ? 0 : 
+                Pemasukan_Pengeluaran::where('id_transaksi', '<', $id)
+                    ->latest('id_transaksi')
+                    ->value('saldo');
+
+            foreach ($subsequentTransaksi as $trans) {
+                $saldo = $trans->jenis_transaksi === 'pemasukan' 
+                    ? $saldo + $trans->jumlah 
+                    : $saldo - $trans->jumlah;
+                $trans->update(['saldo' => $saldo]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Transaksi berhasil diupdate',
+                'data' => $transaksi
+            ], 200);
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Gagal mengupdate transaksi',
+                'error' => $e->getMessage()
+            ], 400);
         }
-        
-
-        // Update bulan dan tahun hanya jika tanggal diupdate
-        if (isset($validated['tanggal'])) {
-            $tanggal = date('Y-m-d', strtotime($validated['tanggal']));
-            $validated['bulan'] = date('n', strtotime($tanggal));
-            $validated['tahun'] = date('Y', strtotime($tanggal));
-        }
-
-        // Update transaksi
-        $transaksi->update($validated);
-
-        // Recalculate saldo for all subsequent transactions
-        $subsequentTransaksi = Pemasukan_Pengeluaran::where('id_transaksi', '>=', $id)
-            ->orderBy('tanggal', 'asc')
-            ->orderBy('id_transaksi', 'asc')
-            ->get();
-
-        $saldo = $transaksi->id_transaksi === 1 ? 0 : 
-            Pemasukan_Pengeluaran::where('id_transaksi', '<', $id)
-                ->latest('id_transaksi')
-                ->value('saldo');
-
-        foreach ($subsequentTransaksi as $trans) {
-            $saldo = $trans->jenis_transaksi === 'pemasukan' 
-                ? $saldo + $trans->jumlah 
-                : $saldo - $trans->jumlah;
-            $trans->update(['saldo' => $saldo]);
-        }
-
-        DB::commit();
-
-        return response()->json([
-            'message' => 'Transaksi berhasil diupdate',
-            'data' => $transaksi
-        ], 200);
-
-    } catch (Exception $e) {
-        DB::rollBack();
-        return response()->json([
-            'message' => 'Gagal mengupdate transaksi',
-            'error' => $e->getMessage()
-        ], 400);
     }
-}
 
     // Delete transaksi
     public function delete($id)
@@ -329,6 +333,26 @@ class PemasukanPengeluaranController extends Controller
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'Gagal mendapatkan rekap tahunan',
+                'error' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    public function getRiwayatTransaksiPenyewa($idPenyewa)
+    {
+        try {
+            $transaksi = Pemasukan_Pengeluaran::where('id_penyewa', $idPenyewa)
+                ->where('kategori', 'Pembayaran Sewa')
+                ->orderBy('tanggal', 'desc')
+                ->get();
+
+            return response()->json([
+                'message' => 'Berhasil mendapatkan riwayat transaksi',
+                'data' => $transaksi
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Gagal mendapatkan riwayat transaksi',
                 'error' => $e->getMessage()
             ], 400);
         }

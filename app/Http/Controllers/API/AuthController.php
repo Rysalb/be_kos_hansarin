@@ -157,9 +157,10 @@ public function verifikasiUser(Request $request, $userId)
                 'kategori' => 'Pembayaran Sewa',
                 'tanggal' => $request->tanggal_masuk,
                 'jumlah' => $request->harga_sewa,
-                'keterangan' => "Pembayaran sewa kamar {$penyewa->unit_kamar->nomor_kamar} - {$user->name}",
+                'keterangan' => "Pembayaran sewa kamar {$penyewa->unit_kamar->nomor_kamar} - {$user->name} [ID Penyewa: {$penyewa->id_penyewa}]",
                 'bulan' => Carbon::parse($request->tanggal_masuk)->month,
-                'tahun' => Carbon::parse($request->tanggal_masuk)->year
+                'tahun' => Carbon::parse($request->tanggal_masuk)->year,
+                'id_penyewa' => $penyewa->id_penyewa
             ]);
 
             // Hitung saldo

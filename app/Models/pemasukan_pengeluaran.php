@@ -19,7 +19,8 @@ class Pemasukan_Pengeluaran extends Model
         'jumlah',
         'keterangan',
         'bukti_transaksi',
-        'saldo'
+        'saldo',
+        'id_penyewa'
     ];
 
     // Menghitung saldo setelah transaksi
@@ -40,5 +41,11 @@ class Pemasukan_Pengeluaran extends Model
             $transaksi->bulan = date('n', strtotime($transaksi->tanggal));
             $transaksi->tahun = date('Y', strtotime($transaksi->tanggal));
         });
+    }
+
+    // Tambahkan relasi ke model Penyewa
+    public function penyewa()
+    {
+        return $this->belongsTo(Penyewa::class, 'id_penyewa', 'id_penyewa');
     }
 }

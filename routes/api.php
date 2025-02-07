@@ -72,6 +72,7 @@ Route::prefix('pemasukan-pengeluaran')->group(function () {
     Route::get('/rekap-harian/{tanggal}', [PemasukanPengeluaranController::class, 'getRekapHarian']);
     Route::get('/rekap-bulanan/{bulan}/{tahun}', [PemasukanPengeluaranController::class, 'getRekapBulanan']);
     Route::get('/rekap-tahunan/{tahun}', [PemasukanPengeluaranController::class, 'getRekapTahunan']);
+    Route::get('/penyewa/{idPenyewa}', [PemasukanPengeluaranController::class, 'getRiwayatTransaksiPenyewa']);
 });
 
 Route::prefix('pembayaran')->group(function () {
