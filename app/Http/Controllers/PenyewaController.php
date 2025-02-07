@@ -122,7 +122,7 @@ class PenyewaController extends Controller
                 'foto_ktp' => 'required|image|mimes:jpeg,png,jpg',
                 'alamat_asal' => 'required|string',
                 'nomor_wa' => 'required|string',
-                'tanggal_masuk' => 'required|date',
+                'tanggal_masuk' => 'required|date_format:Y-m-d',
                 'durasi_sewa' => 'required|integer',
                 'harga_sewa' => 'required|numeric',
             ]);
@@ -135,8 +135,8 @@ class PenyewaController extends Controller
                 ], 422);
             }
 
-            // Parse tanggal masuk
-            $tanggalMasuk = Carbon::createFromFormat('d F Y', $request->tanggal_masuk);
+            // Parse tanggal masuk menggunakan format yang benar
+            $tanggalMasuk = Carbon::createFromFormat('Y-m-d', $request->tanggal_masuk);
             
             // Upload foto KTP
             $fotoKtpPath = $request->file('foto_ktp')->store('ktp', 'public');
