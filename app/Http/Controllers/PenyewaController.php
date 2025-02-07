@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Exception;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+use App\Models\User;
+use Carbon\Carbon;
 
 class PenyewaController extends Controller
 {
@@ -108,69 +111,82 @@ class PenyewaController extends Controller
     {
         try {
             DB::beginTransaction();
-    
-            $validated = $request->validate([
-                'id_user' => 'required|exists:users,id_user',
-                'id_kamar' => 'required|exists:kamar,id_kamar',
+
+            // Validasi input
+            $validator = Validator::make($request->all(), [
+                'name' => 'required|string',
+                'email' => 'required|email|unique:users',
+                'password' => 'required|min:8',
                 'id_unit' => 'required|exists:unit_kamar,id_unit',
                 'nik' => 'required|string|size:16',
-                'foto_ktp' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+                'foto_ktp' => 'required|image|mimes:jpeg,png,jpg',
                 'alamat_asal' => 'required|string',
+                'nomor_wa' => 'required|string',
                 'tanggal_masuk' => 'required|date',
                 'durasi_sewa' => 'required|integer',
-                'nomor_wa' => 'required|string',
-                'tanggal_keluar' => 'required|date|after:tanggal_masuk',
+                'harga_sewa' => 'required|numeric',
             ]);
-    
-            // Cek ketersediaan unit dan validasi unit sesuai dengan kategori kamar
-            $unit = Unit_Kamar::where('id_unit', $validated['id_unit'])
-                             ->where('id_kamar', $validated['id_kamar'])
-                             ->where('status', 'tersedia')
-                             ->first();
-    
-            if (!$unit) {
-                throw new Exception('Unit kamar tidak tersedia atau tidak sesuai dengan kategori yang dipilih');
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Validation Error',
+                    'errors' => $validator->errors()
+                ], 422);
             }
-    
+
+            // Parse tanggal masuk
+            $tanggalMasuk = Carbon::createFromFormat('d F Y', $request->tanggal_masuk);
+            
             // Upload foto KTP
-            if ($request->hasFile('foto_ktp')) {
-                $filePath = $request->file('foto_ktp')->store('ktp', 'public');
-                $validated['foto_ktp'] = 'storage/' . $filePath;
-            }
-    
-            // Buat data penyewa
-            $penyewa = Penyewa::create([
-                'id_user' => $validated['id_user'],
-                'id_unit' => $validated['id_unit'],
-                'nik' => $validated['nik'],
-                'foto_ktp' => $validated['foto_ktp'],
-                'alamat_asal' => $validated['alamat_asal'],
-                'tanggal_masuk' => $validated['tanggal_masuk'],
-                'durasi_sewa' => $validated['durasi_sewa'],
-                'nomor_wa' => $validated['nomor_wa'],
-                'tanggal_keluar' => $validated['tanggal_keluar'],
-                'status_penyewa' => 'aktif'
+            $fotoKtpPath = $request->file('foto_ktp')->store('ktp', 'public');
+
+            // Buat user baru
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'role' => 'user',
+                'status_verifikasi' => 'disetujui'
             ]);
-    
-            // Update status unit menjadi dihuni
-            $unit->update(['status' => 'dihuni']);
-    
+
+            // Hitung tanggal keluar
+            $tanggalKeluar = $tanggalMasuk->copy()->addMonths($request->durasi_sewa);
+
+            // Buat penyewa baru
+            $penyewa = Penyewa::create([
+                'id_user' => $user->id_user,
+                'id_unit' => $request->id_unit,
+                'nik' => $request->nik,
+                'foto_ktp' => 'storage/' . $fotoKtpPath,
+                'alamat_asal' => $request->alamat_asal,
+                'nomor_wa' => $request->nomor_wa,
+                'tanggal_masuk' => $tanggalMasuk->format('Y-m-d'),
+                'durasi_sewa' => $request->durasi_sewa,
+                'harga_sewa' => $request->harga_sewa,
+                'status_penyewa' => 'aktif',
+                'tanggal_keluar' => $tanggalKeluar->format('Y-m-d'),
+            ]);
+
+            // Update status unit kamar
+            Unit_Kamar::where('id_unit', $request->id_unit)
+                ->update(['status' => 'dihuni']);
+
             DB::commit();
-    
-            // Load relasi untuk response
-            $penyewa->load('unit_kamar.kamar');
-    
+
             return response()->json([
-                'message' => 'Data penyewa berhasil dibuat',
+                'status' => true,
+                'message' => 'Penyewa berhasil ditambahkan',
                 'data' => $penyewa
-            ], 201);
-    
+            ], 200);
+
         } catch (Exception $e) {
             DB::rollBack();
             return response()->json([
-                'message' => 'Gagal membuat data penyewa',
+                'status' => false,
+                'message' => 'Gagal menambahkan penyewa',
                 'error' => $e->getMessage()
-            ], 400);
+            ], 500);
         }
     }
 

@@ -59,6 +59,7 @@ Route::prefix('penyewa')->group(function () {
 Route::prefix('unit-kamar')->group(function () {
     Route::get('/available', [UnitKamarController::class, 'getAvailableUnits']);
     Route::put('/{id_unit}/status', [UnitKamarController::class, 'updateStatus']);
+    Route::get('/detail/{id_unit}', [UnitKamarController::class, 'getDetail']);
 });
 
 // Route untuk Pemasukan dan Pengeluaran
