@@ -53,6 +53,7 @@ Route::prefix('penyewa')->group(function () {
     Route::post('/update/{id_penyewa}', [PenyewaController::class, 'update']);
     Route::delete('/delete/{id_penyewa}', [PenyewaController::class, 'delete']);
     Route::get('/unit-kamar/all', [PenyewaController::class, 'getAllUnits']);
+    Route::post('/pindah-kamar', [PenyewaController::class, 'pindahKamar']);
 });
 
 // Route untuk Unit Kamar

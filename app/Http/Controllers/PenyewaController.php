@@ -341,4 +341,48 @@ class PenyewaController extends Controller
             ], 400);
         }
     }
+
+    public function pindahKamar(Request $request)
+{
+    try {
+        DB::beginTransaction();
+
+        $validated = $request->validate([
+            'id_penyewa' => 'required|exists:penyewa,id_penyewa',
+            'id_unit_baru' => 'required|exists:unit_kamar,id_unit',
+        ]);
+
+        $penyewa = Penyewa::findOrFail($validated['id_penyewa']);
+        $unitLama = Unit_Kamar::findOrFail($penyewa->id_unit);
+        $unitBaru = Unit_Kamar::findOrFail($validated['id_unit_baru']);
+
+        // Validasi unit baru harus tersedia
+        if ($unitBaru->status !== 'tersedia') {
+            throw new Exception('Unit kamar tidak tersedia');
+        }
+
+        // Update status unit lama menjadi tersedia
+        $unitLama->update(['status' => 'tersedia']);
+
+        // Update status unit baru menjadi dihuni
+        $unitBaru->update(['status' => 'dihuni']);
+
+        // Update id_unit penyewa
+        $penyewa->update(['id_unit' => $validated['id_unit_baru']]);
+
+        DB::commit();
+
+        return response()->json([
+            'message' => 'Berhasil pindah kamar',
+            'data' => $penyewa->load('unit_kamar')
+        ], 200);
+
+    } catch (Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'message' => 'Gagal pindah kamar',
+            'error' => $e->getMessage()
+        ], 400);
+    }
+}
 }
