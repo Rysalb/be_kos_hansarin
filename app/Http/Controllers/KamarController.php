@@ -245,4 +245,34 @@ class KamarController extends Controller
             ], 500);
         }
     }
+
+    public function getAllKamar()
+    {
+        try {
+            $kamarList = Unit_Kamar::select(
+                'unit_kamar.id_unit',
+                'unit_kamar.nomor_kamar',
+                'unit_kamar.status',
+                'users.name as nama_penghuni',
+                'penyewa.alamat_asal',
+                'penyewa.nomor_wa'
+            )
+            ->leftJoin('penyewa', 'unit_kamar.id_unit', '=', 'penyewa.id_unit')
+            ->leftJoin('users', 'penyewa.id_user', '=', 'users.id_user')
+            ->orderBy('unit_kamar.nomor_kamar')
+            ->get();
+    
+            return response()->json([
+                'status' => true,
+                'message' => 'Berhasil mengambil data kamar',
+                'data' => $kamarList
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Gagal mengambil data kamar',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

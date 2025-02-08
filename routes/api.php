@@ -50,6 +50,7 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('/stats', [KamarController::class, 'getStats']);
 Route::get('/expiring', [KamarController::class, 'getExpiringRooms']);
 Route::get('/kamarall', [KamarController::class, 'getAll']);
+Route::get('/kamarall/user', [KamarController::class, 'getAllKamar']);
 Route::post('/kamar', [KamarController::class, 'create']);
 Route::post('/kamarupdate/{id}', [KamarController::class, 'update']);
 Route::delete('/kamardel/{id}', [KamarController::class, 'delete']);
