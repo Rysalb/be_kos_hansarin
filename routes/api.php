@@ -21,6 +21,7 @@ Route::post('/register-admin', [AuthController::class, 'registerAdmin']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+    Route::get('/profile', [AuthController::class, 'getProfile']);
     Route::post('/verifikasi-user/{userId}', [AuthController::class, 'verifikasiUser'])
         ->middleware('role:admin');
     
@@ -32,7 +33,6 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::get('/user/{userId}', [AuthController::class, 'getUserById'])
     ->middleware('role:admin'); // Pastikan hanya admin yang bisa mengakses
-    Route::get('/user/profile', [AuthController::class, 'getProfile']);
     // Add other protected routes here
 
     Route::prefix('kamar')->group(function () {
@@ -122,4 +122,8 @@ Route::prefix('nomor-penting')->group(function () {
     Route::post('/update/{id_nomor}', [NomorPentingController::class, 'update']);
     Route::delete('/delete/{id_nomor}', [NomorPentingController::class, 'delete']);
     // Route::get('/kategori/{kategori}', [NomorPentingController::class, 'getByKategori']);
+});
+Route::prefix('kamar')->group(function () {
+    Route::get('/stats', [KamarController::class, 'getStats']);
+    Route::get('/expiring', [KamarController::class, 'getExpiringRooms']);
 });

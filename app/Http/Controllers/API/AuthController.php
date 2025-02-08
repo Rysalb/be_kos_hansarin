@@ -404,13 +404,16 @@ public function getProfile(Request $request)
 {
     try {
         $user = $request->user();
+        if (!$user) {
+            throw new Exception('User tidak ditemukan');
+        }
         
-        // Jika user adalah admin, tidak perlu load relasi tambahan
+        // Jika user adalah admin
         if ($user->role === 'admin') {
             return response()->json([
                 'status' => true,
                 'data' => [
-                    'id' => $user->id,
+                    'id_user' => $user->id_user,
                     'name' => $user->name,
                     'email' => $user->email,
                     'role' => $user->role,
@@ -418,11 +421,36 @@ public function getProfile(Request $request)
             ]);
         }
         
-        // Jika user adalah penyewa, load relasi yang diperlukan
-        $user->load(['penyewa', 'penyewa.unit_kamar']);
+        // Jika user adalah penyewa
+        $penyewa = $user->penyewa()->with(['unit_kamar.kamar'])->first();
+        if (!$penyewa) {
+            return response()->json([
+                'status' => true,
+                'data' => [
+                    'id_user' => $user->id_user,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'status_verifikasi' => $user->status_verifikasi
+                ]
+            ]);
+        }
+        
         return response()->json([
             'status' => true,
-            'data' => $user
+            'data' => [
+                'id_user' => $user->id_user,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'status_verifikasi' => $user->status_verifikasi,
+                'tanggal_masuk' => $penyewa->tanggal_masuk,
+                'tanggal_keluar' => $penyewa->tanggal_keluar,
+                'status_penyewa' => $penyewa->status_penyewa,
+                'nomor_kamar' => $penyewa->unit_kamar->nomor_kamar ?? null,
+                'tipe_kamar' => $penyewa->unit_kamar->kamar->tipe_kamar ?? null,
+                'nomor_wa' => $penyewa->nomor_wa
+            ]
         ]);
     } catch (Exception $e) {
         return response()->json([
