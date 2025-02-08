@@ -11,6 +11,7 @@ use App\Http\Controllers\PesananMakananController;
 use App\Http\Controllers\NomorPentingController;
 use App\Http\Controllers\KategoriKamarController;
 use App\Http\Controllers\UnitKamarController;
+use App\Http\Controllers\MetodePembayaranController;
 // Public routes
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -130,4 +131,11 @@ Route::prefix('nomor-penting')->group(function () {
 Route::prefix('kamar')->group(function () {
     Route::get('/stats', [KamarController::class, 'getStats']);
     Route::get('/expiring', [KamarController::class, 'getExpiringRooms']);
+});
+
+Route::prefix('metode-pembayaran')->group(function () {
+    Route::get('/', [MetodePembayaranController::class, 'index']);
+    Route::post('/create', [MetodePembayaranController::class, 'store']);
+    Route::delete('/delete/{id}', [MetodePembayaranController::class, 'destroy']);
+    Route::post('/update/{id}', [MetodePembayaranController::class, 'update']);
 });
