@@ -198,6 +198,8 @@ public function verifikasiUser(Request $request, $userId)
         'name' => 'required|string|max:255',
         'email' => 'required|string|email|max:255|unique:users',
         'password' => 'required|string|min:8',
+        'nomor_wa' => 'required|string',
+        'password_confirmation' => 'required|same:password',
     ]);
 
     if ($validator->fails()) {
@@ -208,26 +210,32 @@ public function verifikasiUser(Request $request, $userId)
         ], 422);
     }
 
-    $user = User::create([
-        'name' => $request->name,
-        'email' => $request->email,
-        'password' => Hash::make($request->password),
-        'role' => 'admin' // Set role sebagai admin
-    ]);
+    DB::beginTransaction();
+    try {
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => 'admin',
+            'nomor_wa' => $request->nomor_wa
+        ]);
 
-    $token = $user->createToken('auth-token')->plainTextToken;
+        DB::commit();
 
-    return response()->json([
-        'status' => true,
-        'message' => 'Admin registration successful',
-        'token' => $token,
-        'user' => [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'role' => $user->role
-        ]
-    ], 201);
+        return response()->json([
+            'status' => true,
+            'message' => 'Admin berhasil ditambahkan',
+            'data' => $user
+        ], 201);
+
+    } catch (Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'status' => false,
+            'message' => 'Gagal menambahkan admin',
+            'error' => $e->getMessage()
+        ], 500);
+    }
 }
 
     public function login(Request $request)
@@ -456,6 +464,30 @@ public function getProfile(Request $request)
         return response()->json([
             'status' => false,
             'message' => 'Gagal memuat profil',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+public function getAdminList()
+{
+    try {
+        // Mengambil semua admin kecuali yang dibuat melalui seeder
+        $admins = User::where('role', 'admin')
+            ->where('email', '!=', 'admin@gmail.com') // Asumsikan ini email admin seeder
+            ->select('id_user', 'name', 'email', 'nomor_wa', 'created_at')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Berhasil mengambil daftar admin',
+            'data' => $admins
+        ], 200);
+    } catch (Exception $e) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Gagal mengambil daftar admin',
             'error' => $e->getMessage()
         ], 500);
     }

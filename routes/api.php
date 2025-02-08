@@ -39,6 +39,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/stats', [KamarController::class, 'getStats']);
         Route::get('/expiring', [KamarController::class, 'getExpiringRooms']);
     });
+
+    // Tambahkan route untuk mendapatkan list admin
+    Route::get('/admin-list', [AuthController::class, 'getAdminList']);
 });
 
 // route kamar
