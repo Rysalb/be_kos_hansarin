@@ -399,4 +399,37 @@ public function getUserById(Request $request, $userId)
         ], 500);
     }
 }
+
+public function getProfile(Request $request)
+{
+    try {
+        $user = $request->user();
+        
+        // Jika user adalah admin, tidak perlu load relasi tambahan
+        if ($user->role === 'admin') {
+            return response()->json([
+                'status' => true,
+                'data' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                ]
+            ]);
+        }
+        
+        // Jika user adalah penyewa, load relasi yang diperlukan
+        $user->load(['penyewa', 'penyewa.unit_kamar']);
+        return response()->json([
+            'status' => true,
+            'data' => $user
+        ]);
+    } catch (Exception $e) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Gagal memuat profil',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
 }

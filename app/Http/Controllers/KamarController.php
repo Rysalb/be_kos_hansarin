@@ -7,6 +7,7 @@ use App\Models\Unit_Kamar;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Exception;
+use App\Models\Penyewa;
 
 class KamarController extends Controller
 {
@@ -190,6 +191,58 @@ class KamarController extends Controller
                 'message' => 'Gagal menghapus data kamar',
                 'error' => $e->getMessage()
             ], 400);
+        }
+    }
+
+    public function getStats()
+    {
+        try {
+            $stats = Unit_Kamar::selectRaw('
+                SUM(CASE WHEN status = "dihuni" THEN 1 ELSE 0 END) as terisi,
+                SUM(CASE WHEN status = "tersedia" THEN 1 ELSE 0 END) as kosong
+            ')->first();
+
+            return response()->json([
+                'status' => true,
+                'data' => [
+                    'terisi' => (int)$stats->terisi,
+                    'kosong' => (int)$stats->kosong
+                ]
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Gagal mengambil statistik kamar',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getExpiringRooms()
+    {
+        try {
+            $expiringRooms = Penyewa::with(['unit_kamar'])
+                ->where('tanggal_keluar', '<=', now()->addDays(7))
+                ->where('status_penyewa', 'aktif')
+                ->get()
+                ->map(function ($penyewa) {
+                    return [
+                        'nomor_kamar' => $penyewa->unit_kamar->nomor_kamar,
+                        'tanggal_keluar' => $penyewa->tanggal_keluar,
+                        'nama_penyewa' => $penyewa->user->name
+                    ];
+                });
+
+            return response()->json([
+                'status' => true,
+                'data' => $expiringRooms
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Gagal mengambil data kamar',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 }

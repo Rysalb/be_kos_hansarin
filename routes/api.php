@@ -32,11 +32,20 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::get('/user/{userId}', [AuthController::class, 'getUserById'])
     ->middleware('role:admin'); // Pastikan hanya admin yang bisa mengakses
+    Route::get('/user/profile', [AuthController::class, 'getProfile']);
     // Add other protected routes here
+
+    Route::prefix('kamar')->group(function () {
+        Route::get('/stats', [KamarController::class, 'getStats']);
+        Route::get('/expiring', [KamarController::class, 'getExpiringRooms']);
+    });
 });
 
 // route kamar
 //done
+
+Route::get('/stats', [KamarController::class, 'getStats']);
+Route::get('/expiring', [KamarController::class, 'getExpiringRooms']);
 Route::get('/kamarall', [KamarController::class, 'getAll']);
 Route::post('/kamar', [KamarController::class, 'create']);
 Route::post('/kamarupdate/{id}', [KamarController::class, 'update']);
