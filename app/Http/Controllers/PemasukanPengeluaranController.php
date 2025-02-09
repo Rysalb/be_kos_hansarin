@@ -357,4 +357,51 @@ class PemasukanPengeluaranController extends Controller
             ], 400);
         }
     }
+
+    public function getTransaksiByDate($date)
+    {
+        try {
+            $transaksi = Pemasukan_Pengeluaran::whereDate('tanggal', $date)
+                ->orderBy('tanggal', 'desc')
+                ->get();
+
+            $totalPemasukan = $transaksi->where('jenis_transaksi', 'pemasukan')->sum('jumlah');
+            $totalPengeluaran = $transaksi->where('jenis_transaksi', 'pengeluaran')->sum('jumlah');
+
+            return response()->json([
+                'status' => true,
+                'data' => [
+                    'transaksi' => $transaksi,
+                    'total_pemasukan' => $totalPemasukan,
+                    'total_pengeluaran' => $totalPengeluaran
+                ]
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Gagal memuat data transaksi',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getTransaksiByJenis($jenis)
+    {
+        try {
+            $transaksi = Pemasukan_Pengeluaran::where('jenis_transaksi', $jenis)
+                ->orderBy('tanggal', 'desc')
+                ->get();
+
+            return response()->json([
+                'status' => true,
+                'data' => $transaksi
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Gagal memuat data transaksi',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

@@ -90,6 +90,8 @@ Route::prefix('pemasukan-pengeluaran')->group(function () {
     Route::get('/rekap-bulanan/{bulan}/{tahun}', [PemasukanPengeluaranController::class, 'getRekapBulanan']);
     Route::get('/rekap-tahunan/{tahun}', [PemasukanPengeluaranController::class, 'getRekapTahunan']);
     Route::get('/penyewa/{idPenyewa}', [PemasukanPengeluaranController::class, 'getRiwayatTransaksiPenyewa']);
+    Route::get('/by-date/{date}', [PemasukanPengeluaranController::class, 'getTransaksiByDate']);
+    Route::get('/by-jenis/{jenis}', [PemasukanPengeluaranController::class, 'getTransaksiByJenis']);
 });
 
 Route::prefix('pembayaran')->group(function () {
