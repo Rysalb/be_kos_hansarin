@@ -12,6 +12,7 @@ use App\Http\Controllers\NomorPentingController;
 use App\Http\Controllers\KategoriKamarController;
 use App\Http\Controllers\UnitKamarController;
 use App\Http\Controllers\MetodePembayaranController;
+use App\Http\Controllers\PeraturanKosController;
 // Public routes
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -138,4 +139,11 @@ Route::prefix('metode-pembayaran')->group(function () {
     Route::post('/create', [MetodePembayaranController::class, 'store']);
     Route::delete('/delete/{id}', [MetodePembayaranController::class, 'destroy']);
     Route::post('/update/{id}', [MetodePembayaranController::class, 'update']);
+});
+
+Route::prefix('peraturan-kos')->group(function () {
+    Route::get('/', [PeraturanKosController::class, 'getAll']);
+    Route::post('/create', [PeraturanKosController::class, 'create']);
+    Route::put('/update/{id}', [PeraturanKosController::class, 'update']);
+    Route::delete('/delete/{id}', [PeraturanKosController::class, 'delete']);
 });

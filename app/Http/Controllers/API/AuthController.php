@@ -247,6 +247,17 @@ public function verifikasiUser(Request $request, $userId)
 
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
+            
+            // Cek jika user dengan role 'user' masih pending
+            if ($user->role === 'user' && $user->status_verifikasi === 'pending') {
+                Auth::logout(); // Logout user
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Akun Anda masih dalam proses verifikasi admin'
+                ], 401);
+            }
+
+            // Jika verifikasi sudah disetujui atau role admin, lanjutkan proses login
             $token = $user->createToken('auth_token')->plainTextToken;
 
             return response()->json([
@@ -265,7 +276,7 @@ public function verifikasiUser(Request $request, $userId)
         return response()->json([
             'status' => false,
             'message' => 'Invalid credentials'
-        ],401);
+        ], 401);
     }
 
     public function logout(Request $request)
