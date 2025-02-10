@@ -56,29 +56,29 @@ class PemasukanPengeluaranController extends Controller
                 'tanggal' => 'required|date',
                 'jumlah' => 'required|numeric',
                 'keterangan' => 'nullable|string',
-                'id_penyewa' => 'required|exists:penyewa,id_penyewa',
+                'id_penyewa' => 'required_if:is_from_register,true|exists:penyewa,id_penyewa',
+                'is_from_register' => 'boolean',
                 'bukti_transaksi' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
             ]);
-
-            // Tambahkan ID Penyewa ke keterangan untuk tracking
-            $validated['keterangan'] = ($validated['keterangan'] ?? '') . ' [ID Penyewa: ' . $validated['id_penyewa'] . ']';
-
-            // Upload bukti transaksi jika ada
-            if ($request->hasFile('bukti_transaksi')) {
-                $filePath = $request->file('bukti_transaksi')->store('bukti-transaksi', 'public');
-                $validated['bukti_transaksi'] = 'storage/' . $filePath;
-            }
 
             // Tambahkan bulan dan tahun dari tanggal
             $tanggal = date('Y-m-d', strtotime($validated['tanggal']));
             $validated['bulan'] = date('n', strtotime($tanggal));
             $validated['tahun'] = date('Y', strtotime($tanggal));
 
+            // Hanya tambahkan ID Penyewa ke keterangan jika bukan dari admin (dari register)
+            if (isset($validated['is_from_register']) && $validated['is_from_register'] && isset($validated['id_penyewa'])) {
+                $validated['keterangan'] = ($validated['keterangan'] ?? '') . ' [ID Penyewa: ' . $validated['id_penyewa'] . ']';
+            }
+
             // Hitung saldo
             $saldoSebelumnya = Pemasukan_Pengeluaran::latest()->value('saldo') ?? 0;
             $validated['saldo'] = $validated['jenis_transaksi'] === 'pemasukan' 
                 ? $saldoSebelumnya + $validated['jumlah']
                 : $saldoSebelumnya - $validated['jumlah'];
+
+            // Hapus is_from_register dari validated data karena tidak ada di database
+            unset($validated['is_from_register']);
 
             $transaksi = Pemasukan_Pengeluaran::create($validated);
 
