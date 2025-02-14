@@ -100,8 +100,11 @@ class PembayaranController extends Controller
     }
 
     // Verifikasi pembayaran
+ 
+
     public function verifikasi(Request $request, $id_pembayaran)
-    {
+{
+    try {
         $request->validate([
             'status_verifikasi' => 'required|in:verified,rejected',
             'keterangan' => 'required|string'
@@ -113,6 +116,15 @@ class PembayaranController extends Controller
             'keterangan' => $request->keterangan
         ]);
 
-        return response()->json($pembayaran, 200);
+        return response()->json([
+            'message' => 'Pembayaran berhasil diverifikasi',
+            'data' => $pembayaran
+        ], 200);
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'Gagal memverifikasi pembayaran',
+            'error' => $e->getMessage()
+        ], 400);
     }
+}
 }

@@ -100,7 +100,7 @@ Route::prefix('pembayaran')->group(function () {
     Route::post('/create', [PembayaranController::class, 'create']);
     Route::post('/update/{id_pembayaran}', [PembayaranController::class, 'update']);
     Route::delete('/delete/{id_pembayaran}', [PembayaranController::class, 'delete']);
-    // Route::put('/{id_pembayaran}/verifikasi', [PembayaranController::class, 'verifikasi']);
+    Route::post('/verifikasi/{id_pembayaran}', [PembayaranController::class, 'verifikasi']);
 });
 
 
