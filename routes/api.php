@@ -111,6 +111,7 @@ Route::prefix('katalog-makanan')->group(function () {
     Route::post('/update/{id_makanan}', [KatalogMakananController::class, 'update']);
     Route::delete('/delete/{id_makanan}', [KatalogMakananController::class, 'delete']);
     // Route::put('/{id_makanan}/status', [KatalogMakananController::class, 'updateStatus']);
+    Route::get('/kategori/{kategori}', [KatalogMakananController::class, 'getByKategori']);
 });
 
 Route::prefix('pesanan-makanan')->group(function () {

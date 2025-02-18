@@ -111,4 +111,14 @@ class KatalogMakananController extends Controller
 
         return response()->json($makanan, 200);
     }
+
+    public function getByKategori($kategori)
+    {
+        try {
+            $makanan = Katalog_Makanan::where('kategori', $kategori)->get();
+            return response()->json($makanan, 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }
