@@ -13,6 +13,8 @@ use App\Http\Controllers\KategoriKamarController;
 use App\Http\Controllers\UnitKamarController;
 use App\Http\Controllers\MetodePembayaranController;
 use App\Http\Controllers\PeraturanKosController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PasswordResetController;
 // Public routes
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -26,6 +28,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile', [AuthController::class, 'getProfile']);
     Route::post('/verifikasi-user/{userId}', [AuthController::class, 'verifikasiUser'])
         ->middleware('role:admin');
+    Route::post('/profile/update', [ProfileController::class, 'update']);
+    Route::post('/password/email', [PasswordResetController::class, 'sendResetLinkEmail']);
     
     Route::delete('/user/{userId}', [AuthController::class, 'deleteUser'])
     ->middleware('role:admin'); // Pastikan hanya admin yang bisa mengakses

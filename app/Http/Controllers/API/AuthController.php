@@ -435,6 +435,7 @@ public function getProfile(Request $request)
                     'id_user' => $user->id_user,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'nomor_wa'=> $user->nomor_wa,
                     'role' => $user->role,
                 ]
             ]);
