@@ -3,15 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pembayaran;
+use App\Models\metode_pembayaran;
+use App\Models\Penyewa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
+use App\Models\Pemasukan_Pengeluaran;
 
 class PembayaranController extends Controller
 {
     // Mendapatkan semua data pembayaran
     public function getAll()
     {
-        $pembayaran = Pembayaran::with('penyewa')->get();
+        $pembayaran = Pembayaran::with([
+            'penyewa.user',
+            'penyewa.unit_kamar',
+            'metodePembayaran'
+        ])->get();
+        
         return response()->json($pembayaran, 200);
     }
 
@@ -105,26 +115,121 @@ class PembayaranController extends Controller
     public function verifikasi(Request $request, $id_pembayaran)
 {
     try {
-        $request->validate([
-            'status_verifikasi' => 'required|in:verified,rejected',
-            'keterangan' => 'required|string'
-        ]);
+        DB::beginTransaction();
+        
+        $pembayaran = Pembayaran::with('penyewa.unit_kamar')
+            ->findOrFail($id_pembayaran);
+            
+        $pembayaran->status_verifikasi = $request->status_verifikasi;
+        $pembayaran->keterangan = $request->keterangan;
+        $pembayaran->save();
 
-        $pembayaran = Pembayaran::findOrFail($id_pembayaran);
-        $pembayaran->update([
-            'status_verifikasi' => $request->status_verifikasi,
-            'keterangan' => $request->keterangan
-        ]);
+        // If verified, create pemasukan record
+        if ($request->status_verifikasi === 'verified') {
+            Pemasukan_Pengeluaran::create([
+                'jenis_transaksi' => 'pemasukan', // Add this line
+                'kategori' => 'pembayaran_sewa',
+                'jumlah' => $pembayaran->jumlah_pembayaran, // Use the payment amount
+                'tanggal' => now(),
+                'keterangan' => "Pembayaran sewa dari kamar " . 
+                    $pembayaran->penyewa->unit_kamar->nomor_kamar,
+                'id_pembayaran' => $id_pembayaran,
+                'bulan' => now()->month,
+                'tahun' => now()->year,
+                'saldo' => Pemasukan_Pengeluaran::latest()->first()?->saldo ?? 0 + $pembayaran->jumlah_pembayaran
+            ]);
+        }
 
+        DB::commit();
+        
         return response()->json([
-            'message' => 'Pembayaran berhasil diverifikasi',
-            'data' => $pembayaran
-        ], 200);
+            'status' => true,
+            'message' => 'Pembayaran berhasil diverifikasi'
+        ]);
     } catch (\Exception $e) {
+        DB::rollBack();
         return response()->json([
-            'message' => 'Gagal memverifikasi pembayaran',
-            'error' => $e->getMessage()
-        ], 400);
+            'status' => false,
+            'message' => 'Gagal memverifikasi pembayaran: ' . $e->getMessage()
+        ], 500);
     }
 }
+
+    public function upload(Request $request)
+    {
+        try {
+            $request->validate([
+                'metode_pembayaran_id' => 'required|exists:metode_pembayaran,id_metode',
+                'bukti_pembayaran' => 'required|image|max:2048',
+                'jumlah_pembayaran' => 'required|numeric', // Add validation for jumlah_pembayaran
+            ]);
+
+            // Get penyewa ID from authenticated user
+            $user = auth()->user();
+            $penyewa = Penyewa::where('id_user', $user->id_user)->first();
+            
+            if (!$penyewa) {
+                throw new \Exception('Data penyewa tidak ditemukan');
+            }
+
+            // Save payment proof file
+            $buktiPath = $request->file('bukti_pembayaran')->store('bukti-pembayaran', 'public');
+
+            // Create new payment record
+            $pembayaran = Pembayaran::create([
+                'id_user' => $user->id_user,
+                'id_metode' => $request->metode_pembayaran_id,
+                'id_penyewa' => $penyewa->id_penyewa,
+                'jumlah_pembayaran' => $request->jumlah_pembayaran, // Add this field
+                'bukti_pembayaran' => $buktiPath,
+                'status_verifikasi' => 'pending',
+                'tanggal_pembayaran' => now(),
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Bukti pembayaran berhasil diupload',
+                'data' => $pembayaran
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Upload error: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Gagal upload bukti pembayaran: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function histori(Request $request)
+    {
+        try {
+            $year = $request->query('year', date('Y'));
+            
+            $historiPembayaran = Pembayaran::where('id_user', auth()->id())
+                ->whereYear('created_at', $year)
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($pembayaran) {
+                    return [
+                        'id' => $pembayaran->id_pembayaran,
+                        'tanggal' => $pembayaran->tanggal_pembayaran,
+                        'status' => $pembayaran->status_verifikasi,
+                        'bukti_pembayaran' => $pembayaran->bukti_pembayaran,
+                        'metode_pembayaran' => $pembayaran->metodePembayaran->nama_metode,
+                        'keterangan' => $pembayaran->keterangan
+                    ];
+                });
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Data histori pembayaran berhasil diambil',
+                'data' => $historiPembayaran
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Gagal mengambil data histori pembayaran'
+            ], 500);
+        }
+    }
 }

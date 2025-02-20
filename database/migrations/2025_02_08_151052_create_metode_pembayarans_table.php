@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('metode_pembayarans', function (Blueprint $table) {
-            $table->id();
+        Schema::create('metode_pembayaran', function (Blueprint $table) {
+            $table->id('id_metode');
             $table->enum('kategori', ['bank', 'e-wallet']);
             $table->string('nama');
             $table->string('nomor_rekening')->nullable(); // untuk bank
@@ -27,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('metode_pembayarans');
+        Schema::dropIfExists('metode_pembayaran');
     }
 };

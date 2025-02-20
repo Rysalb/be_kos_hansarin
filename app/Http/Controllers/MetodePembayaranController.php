@@ -11,11 +11,27 @@ class MetodePembayaranController extends Controller
 {
     public function index()
     {
-        $metodePembayaran = metode_pembayaran::all();
-        return response()->json([
-            'status' => 'success',
-            'data' => $metodePembayaran
-        ]);
+        try {
+            $metodePembayaran = metode_pembayaran::all();
+            
+            // Transform data untuk menambahkan URL lengkap
+            $metodePembayaran = $metodePembayaran->map(function ($metode) {
+                $metode->logo = $metode->logo ? url(Storage::url($metode->logo)) : null;
+                $metode->qr_code = $metode->qr_code ? url(Storage::url($metode->qr_code)) : null;
+                return $metode;
+            });
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Data metode pembayaran berhasil diambil',
+                'data' => $metodePembayaran
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Gagal mengambil data metode pembayaran'
+            ], 500);
+        }
     }
 
     public function store(Request $request)

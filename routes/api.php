@@ -48,6 +48,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Tambahkan route untuk mendapatkan list admin
     Route::get('/admin-list', [AuthController::class, 'getAdminList']);
+
+    Route::post('/pembayaran/upload', [PembayaranController::class, 'upload']);
+    Route::get('/pembayaran/histori', [PembayaranController::class, 'histori']);
 });
 
 // route kamar
