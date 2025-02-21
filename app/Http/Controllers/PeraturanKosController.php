@@ -9,8 +9,14 @@ class PeraturanKosController extends Controller
 {
     public function getAll()
     {
-        $peraturan = Peraturan_Kos::all();
-        return response()->json($peraturan);
+        try {
+            $peraturan = Peraturan_Kos::latest()->get();
+            return response()->json($peraturan, 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error fetching data: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function create(Request $request)

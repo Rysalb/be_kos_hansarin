@@ -152,7 +152,7 @@ Route::prefix('metode-pembayaran')->group(function () {
 });
 
 Route::prefix('peraturan-kos')->group(function () {
-    Route::get('/', [PeraturanKosController::class, 'getAll']);
+    Route::get('/get/all', [PeraturanKosController::class, 'getAll']);
     Route::post('/create', [PeraturanKosController::class, 'create']);
     Route::put('/update/{id}', [PeraturanKosController::class, 'update']);
     Route::delete('/delete/{id}', [PeraturanKosController::class, 'delete']);

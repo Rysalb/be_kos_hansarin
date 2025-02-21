@@ -205,17 +205,21 @@ class PembayaranController extends Controller
         try {
             $year = $request->query('year', date('Y'));
             
-            $historiPembayaran = Pembayaran::where('id_user', auth()->id())
+            $historiPembayaran = Pembayaran::with(['metodePembayaran'])
+                ->where('id_user', auth()->id())
                 ->whereYear('created_at', $year)
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($pembayaran) {
                     return [
                         'id' => $pembayaran->id_pembayaran,
-                        'tanggal' => $pembayaran->tanggal_pembayaran,
+                        'tanggal_pembayaran' => $pembayaran->tanggal_pembayaran,
+                        'jumlah_pembayaran' => $pembayaran->jumlah_pembayaran,
                         'status' => $pembayaran->status_verifikasi,
-                        'bukti_pembayaran' => $pembayaran->bukti_pembayaran,
-                        'metode_pembayaran' => $pembayaran->metodePembayaran->nama_metode,
+                        'metode_pembayaran' => [
+                            'nama_metode' => $pembayaran->metodePembayaran->nama_metode,
+                            'id_metode' => $pembayaran->metodePembayaran->id_metode
+                        ],
                         'keterangan' => $pembayaran->keterangan
                     ];
                 });

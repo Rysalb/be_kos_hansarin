@@ -10,8 +10,14 @@ class NomorPentingController extends Controller
     // Mendapatkan semua nomor penting
     public function getAll()
     {
-        $nomorPenting = Nomor_Penting::all();
-        return response()->json($nomorPenting, 200);
+        try {
+            $nomorPenting = Nomor_Penting::all();
+            return response()->json($nomorPenting, 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Error fetching data: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     // Mendapatkan detail nomor penting berdasarkan ID
