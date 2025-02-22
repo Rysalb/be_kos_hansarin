@@ -217,7 +217,7 @@ class PembayaranController extends Controller
                         'jumlah_pembayaran' => $pembayaran->jumlah_pembayaran,
                         'status' => $pembayaran->status_verifikasi,
                         'metode_pembayaran' => [
-                            'nama_metode' => $pembayaran->metodePembayaran->nama_metode,
+                            'nama_metode' => $pembayaran->metodePembayaran->nama,
                             'id_metode' => $pembayaran->metodePembayaran->id_metode
                         ],
                         'keterangan' => $pembayaran->keterangan
