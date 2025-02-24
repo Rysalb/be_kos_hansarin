@@ -113,47 +113,57 @@ class PembayaranController extends Controller
  
 
     public function verifikasi(Request $request, $id_pembayaran)
-{
-    try {
-        DB::beginTransaction();
-        
-        $pembayaran = Pembayaran::with('penyewa.unit_kamar')
-            ->findOrFail($id_pembayaran);
+    {
+        try {
+            DB::beginTransaction();
             
-        $pembayaran->status_verifikasi = $request->status_verifikasi;
-        $pembayaran->keterangan = $request->keterangan;
-        $pembayaran->save();
-
-        // If verified, create pemasukan record
-        if ($request->status_verifikasi === 'verified') {
-            Pemasukan_Pengeluaran::create([
-                'jenis_transaksi' => 'pemasukan', // Add this line
-                'kategori' => 'pembayaran_sewa',
-                'jumlah' => $pembayaran->jumlah_pembayaran, // Use the payment amount
-                'tanggal' => now(),
-                'keterangan' => "Pembayaran sewa dari kamar " . 
-                    $pembayaran->penyewa->unit_kamar->nomor_kamar,
-                'id_pembayaran' => $id_pembayaran,
-                'bulan' => now()->month,
-                'tahun' => now()->year,
-                'saldo' => Pemasukan_Pengeluaran::latest()->first()?->saldo ?? 0 + $pembayaran->jumlah_pembayaran
+            $pembayaran = Pembayaran::with(['penyewa.unit_kamar', 'metodePembayaran'])
+                ->findOrFail($id_pembayaran);
+                
+            $pembayaran->status_verifikasi = $request->status_verifikasi;
+            $pembayaran->keterangan = $request->keterangan;
+            $pembayaran->save();
+    
+            // If verified, create pemasukan record
+            if ($request->status_verifikasi === 'verified') {
+                // Get last transaction's saldo
+                $lastTransaction = Pemasukan_Pengeluaran::latest('id_transaksi')->first();
+                $lastSaldo = $lastTransaction ? $lastTransaction->saldo : 0;
+                
+                // Calculate new saldo
+                $newSaldo = $lastSaldo + $pembayaran->jumlah_pembayaran;
+    
+                Pemasukan_Pengeluaran::create([
+                    'jenis_transaksi' => 'pemasukan',
+                    'kategori' => 'Pembayaran Sewa',
+                    'jumlah' => $pembayaran->jumlah_pembayaran,
+                    'tanggal' => $pembayaran->tanggal_pembayaran,
+                    'keterangan' => "Pembayaran sewa kamar " . 
+                        $pembayaran->penyewa->unit_kamar->nomor_kamar . 
+                        " - " . $pembayaran->penyewa->user->name,
+                    'id_pembayaran' => $id_pembayaran,
+                    'id_penyewa' => $pembayaran->id_penyewa,
+                    'bulan' => now()->month,
+                    'tahun' => now()->year,
+                    'saldo' => $newSaldo // Use calculated saldo
+                ]);
+            }
+    
+            DB::commit();
+            
+            return response()->json([
+                'status' => true,
+                'message' => 'Pembayaran berhasil diverifikasi'
             ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Verifikasi error: ' . $e->getMessage()); // Add logging
+            return response()->json([
+                'status' => false,
+                'message' => 'Gagal memverifikasi pembayaran: ' . $e->getMessage()
+            ], 500);
         }
-
-        DB::commit();
-        
-        return response()->json([
-            'status' => true,
-            'message' => 'Pembayaran berhasil diverifikasi'
-        ]);
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return response()->json([
-            'status' => false,
-            'message' => 'Gagal memverifikasi pembayaran: ' . $e->getMessage()
-        ], 500);
     }
-}
 
     public function upload(Request $request)
     {

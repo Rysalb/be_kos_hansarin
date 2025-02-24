@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pemasukan_Pengeluaran;
+use App\Models\Pembayaran;
+use App\Models\metode_pembayaran;
+use App\Models\Penyewa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +17,51 @@ class PemasukanPengeluaranController extends Controller
     public function getAll()
     {
         try {
-            $transaksi = Pemasukan_Pengeluaran::orderBy('tanggal', 'desc')->get();
+            $transaksi = Pemasukan_Pengeluaran::with([
+                'penyewa.user',
+                'penyewa.unit_kamar',
+                'pembayaran.metodePembayaran'
+            ])
+            ->orderBy('tanggal', 'desc')
+            ->get()
+            ->map(function ($item) {
+                // Dapatkan data pembayaran jika ada
+                $pembayaranData = $item->pembayaran;
+                $metodePembayaranData = null;
+    
+                if ($pembayaranData && $pembayaranData->metodePembayaran) {
+                    $metodePembayaranData = [
+                        'nama_metode' => $pembayaranData->metodePembayaran->nama,
+                        'id_metode' => $pembayaranData->metodePembayaran->id_metode
+                    ];
+                }
+    
+                return [
+                    'id_transaksi' => $item->id_transaksi,
+                    'id_pembayaran' => $pembayaranData ? $pembayaranData->id_pembayaran : null,
+                    'jenis_transaksi' => $item->jenis_transaksi,
+                    'kategori' => $item->kategori,
+                    'tanggal' => $item->tanggal,
+                    'tanggal_pembayaran' => $pembayaranData ? $pembayaranData->tanggal_pembayaran : null,
+                    'jumlah' => $item->jumlah,
+                    'keterangan' => $item->keterangan,
+                    'status_verifikasi' => $pembayaranData ? $pembayaranData->status_verifikasi : null,
+                    'penyewa' => $item->penyewa ? [
+                        'user' => [
+                            'name' => $item->penyewa->user->name
+                        ],
+                        'unit_kamar' => [
+                            'nomor_kamar' => $item->penyewa->unit_kamar->nomor_kamar
+                        ]
+                    ] : null,
+                    'metode_pembayaran' => $item->pembayaran?->metodePembayaran ? [
+                        'nama_metode' => $item->pembayaran->metodePembayaran->nama,
+                        'nama' => $item->pembayaran->metodePembayaran->nama, // Add this as fallback
+                        'id_metode' => $item->pembayaran->metodePembayaran->id_metode
+                    ] : null
+                ];
+            });
+    
             return response()->json([
                 'message' => 'Berhasil mendapatkan data transaksi',
                 'data' => $transaksi
@@ -26,7 +73,6 @@ class PemasukanPengeluaranController extends Controller
             ], 400);
         }
     }
-
     // Mendapatkan transaksi by ID
     public function getById($id)
     {

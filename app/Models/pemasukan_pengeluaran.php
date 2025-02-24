@@ -20,7 +20,9 @@ class Pemasukan_Pengeluaran extends Model
         'keterangan',
         'bukti_transaksi',
         'saldo',
-        'id_penyewa'
+        'id_penyewa',
+        'id_pembayaran',
+        'id_metode',
     ];
 
     // Menghitung saldo setelah transaksi
@@ -48,4 +50,11 @@ class Pemasukan_Pengeluaran extends Model
     {
         return $this->belongsTo(Penyewa::class, 'id_penyewa', 'id_penyewa');
     }
+
+    public function pembayaran()
+    {
+        return $this->belongsTo(Pembayaran::class, 'id_pembayaran', 'id_pembayaran');
+           
+    }
+  
 }
