@@ -28,14 +28,21 @@ class PemasukanPengeluaranController extends Controller
                 // Dapatkan data pembayaran jika ada
                 $pembayaranData = $item->pembayaran;
                 $metodePembayaranData = null;
-    
+
+                // Set metode pembayaran berdasarkan kondisi
                 if ($pembayaranData && $pembayaranData->metodePembayaran) {
                     $metodePembayaranData = [
                         'nama_metode' => $pembayaranData->metodePembayaran->nama,
                         'id_metode' => $pembayaranData->metodePembayaran->id_metode
                     ];
+                } elseif ($item->kategori == 'Pembayaran Sewa' && !$pembayaranData) {
+                    // Jika kategori Pembayaran Sewa tapi tidak ada id_pembayaran
+                    $metodePembayaranData = [
+                        'nama_metode' => 'Pembayaran Awal',
+                        'id_metode' => null
+                    ];
                 }
-    
+
                 return [
                     'id_transaksi' => $item->id_transaksi,
                     'id_pembayaran' => $pembayaranData ? $pembayaranData->id_pembayaran : null,
@@ -54,14 +61,10 @@ class PemasukanPengeluaranController extends Controller
                             'nomor_kamar' => $item->penyewa->unit_kamar->nomor_kamar
                         ]
                     ] : null,
-                    'metode_pembayaran' => $item->pembayaran?->metodePembayaran ? [
-                        'nama_metode' => $item->pembayaran->metodePembayaran->nama,
-                        'nama' => $item->pembayaran->metodePembayaran->nama, // Add this as fallback
-                        'id_metode' => $item->pembayaran->metodePembayaran->id_metode
-                    ] : null
+                    'metode_pembayaran' => $metodePembayaranData
                 ];
             });
-    
+
             return response()->json([
                 'message' => 'Berhasil mendapatkan data transaksi',
                 'data' => $transaksi
@@ -114,7 +117,7 @@ class PemasukanPengeluaranController extends Controller
 
             // Hanya tambahkan ID Penyewa ke keterangan jika bukan dari admin (dari register)
             if (isset($validated['is_from_register']) && $validated['is_from_register'] && isset($validated['id_penyewa'])) {
-                $validated['keterangan'] = ($validated['keterangan'] ?? '') . ' [ID Penyewa: ' . $validated['id_penyewa'] . ']';
+                $validated['keterangan'] = ($validated['keterangan'] ?? '');
             }
 
             // Hitung saldo
