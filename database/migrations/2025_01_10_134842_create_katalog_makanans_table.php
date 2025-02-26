@@ -12,14 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('katalog_makanan', function (Blueprint $table) {
-            $table->id('id_makanan');
-            $table->string('nama_makanan', 100);
-            $table->decimal('harga', 10, 2);
-            $table->string('kategori');
-            $table->text('deskripsi')->nullable();
-            $table->string('foto_makanan');
-            $table->enum('status', ['tersedia', 'tidak_tersedia']);
-            $table->timestamps();
+        $table->id('id_makanan');
+        $table->string('nama_makanan', 100);
+        $table->decimal('harga', 10, 2);
+        $table->string('kategori');
+        $table->text('deskripsi')->nullable();
+        $table->string('foto_makanan');
+        $table->integer('stock')->default(0);  // Add stock column
+        $table->enum('status', ['tersedia', 'tidak_tersedia']);
+        $table->timestamps();
         });
     }
 

@@ -115,7 +115,7 @@ Route::prefix('katalog-makanan')->group(function () {
     Route::get('/get/all', [KatalogMakananController::class, 'getAll']);
     Route::get('/get/{id_makanan}', [KatalogMakananController::class, 'getById']);
     Route::post('/create', [KatalogMakananController::class, 'create']);
-    Route::post('/update/{id_makanan}', [KatalogMakananController::class, 'update']);
+    Route::match(['post', 'put'], '/update/{id_makanan}', [KatalogMakananController::class, 'update']); // Allow both POST and PUT
     Route::delete('/delete/{id_makanan}', [KatalogMakananController::class, 'delete']);
     // Route::put('/{id_makanan}/status', [KatalogMakananController::class, 'updateStatus']);
     Route::get('/kategori/{kategori}', [KatalogMakananController::class, 'getByKategori']);
