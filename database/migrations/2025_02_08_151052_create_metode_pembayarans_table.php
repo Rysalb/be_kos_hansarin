@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::create('metode_pembayaran', function (Blueprint $table) {
             $table->id('id_metode');
-            $table->enum('kategori', ['bank', 'e-wallet']);
+            $table->enum('kategori', ['bank', 'e-wallet', 'otomatis']); // Add 'otomatis' to enum
             $table->string('nama');
             $table->string('nomor_rekening')->nullable(); // untuk bank
             $table->string('qr_code')->nullable(); // untuk e-wallet
-            $table->string('logo');
+            $table->string('logo')->nullable(); // Make logo nullable
             $table->timestamps();
         });
     }

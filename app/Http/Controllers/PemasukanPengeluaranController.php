@@ -98,46 +98,60 @@ class PemasukanPengeluaranController extends Controller
     {
         try {
             DB::beginTransaction();
-
+    
             $validated = $request->validate([
                 'jenis_transaksi' => 'required|in:pemasukan,pengeluaran',
                 'kategori' => 'required|string',
                 'tanggal' => 'required|date',
                 'jumlah' => 'required|numeric',
                 'keterangan' => 'nullable|string',
-                'id_penyewa' => 'required_if:is_from_register,true|exists:penyewa,id_penyewa',
-                'is_from_register' => 'boolean',
-                'bukti_transaksi' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
+                'id_penyewa' => 'nullable|exists:penyewa,id_penyewa',
+                'id_user' => 'nullable|exists:users,id_user',
+                'id_metode' => 'nullable',
+                'bukti_pembayaran' => 'nullable'
             ]);
+    
+            // Calculate saldo
+            $lastTransaction = Pemasukan_Pengeluaran::latest()->first();
+            $lastSaldo = $lastTransaction ? $lastTransaction->saldo : 0;
+            $newSaldo = $validated['jenis_transaksi'] === 'pemasukan' 
+                ? $lastSaldo + $validated['jumlah']
+                : $lastSaldo - $validated['jumlah'];
+    
+      // In create method
+if ($validated['kategori'] === 'Pembayaran Sewa' && $validated['id_penyewa']) {
+    $pembayaran = Pembayaran::create([
+        'id_penyewa' => $validated['id_penyewa'],
+        'id_user' => $validated['id_user'],
+        'id_metode' => 1, // Always use ID 1 for automatic payments
+        'tanggal_pembayaran' => $validated['tanggal'],
+        'jumlah_pembayaran' => $validated['jumlah'],
+        'status_verifikasi' => 'verified',
+        'keterangan' => $validated['keterangan'],
+        'bukti_pembayaran' => 'manual_entry.jpg'
+    ]);
 
-            // Tambahkan bulan dan tahun dari tanggal
-            $tanggal = date('Y-m-d', strtotime($validated['tanggal']));
-            $validated['bulan'] = date('n', strtotime($tanggal));
-            $validated['tahun'] = date('Y', strtotime($tanggal));
-
-            // Hanya tambahkan ID Penyewa ke keterangan jika bukan dari admin (dari register)
-            if (isset($validated['is_from_register']) && $validated['is_from_register'] && isset($validated['id_penyewa'])) {
-                $validated['keterangan'] = ($validated['keterangan'] ?? '');
-            }
-
-            // Hitung saldo
-            $saldoSebelumnya = Pemasukan_Pengeluaran::latest()->value('saldo') ?? 0;
-            $validated['saldo'] = $validated['jenis_transaksi'] === 'pemasukan' 
-                ? $saldoSebelumnya + $validated['jumlah']
-                : $saldoSebelumnya - $validated['jumlah'];
-
-            // Hapus is_from_register dari validated data karena tidak ada di database
-            unset($validated['is_from_register']);
-
-            $transaksi = Pemasukan_Pengeluaran::create($validated);
-
+    $validated['id_pembayaran'] = $pembayaran->id_pembayaran;
+}
+    
+            $transaksi = Pemasukan_Pengeluaran::create([
+                'jenis_transaksi' => $validated['jenis_transaksi'],
+                'kategori' => $validated['kategori'],
+                'tanggal' => $validated['tanggal'],
+                'jumlah' => $validated['jumlah'],
+                'keterangan' => $validated['keterangan'],
+                'id_penyewa' => $validated['id_penyewa'] ?? null,
+                'id_pembayaran' => $pembayaran->id_pembayaran ?? null,
+                'saldo' => $newSaldo
+            ]);
+    
             DB::commit();
-
+    
             return response()->json([
                 'message' => 'Transaksi berhasil dibuat',
                 'data' => $transaksi
             ], 201);
-
+    
         } catch (Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -146,7 +160,6 @@ class PemasukanPengeluaranController extends Controller
             ], 400);
         }
     }
-
     // Update transaksi
     public function update(Request $request, $id)
     {

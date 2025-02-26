@@ -21,6 +21,10 @@ class Pembayaran extends Model
         'keterangan'
     ];
 
+    protected $attributes = [
+        'bukti_pembayaran' => 'manual_entry.jpg' // Set default value
+    ];
+
     // Relasi dengan model Penyewa
     public function penyewa()
     {

@@ -12,15 +12,16 @@ class MetodePembayaranController extends Controller
     public function index()
     {
         try {
-            $metodePembayaran = metode_pembayaran::all();
-            
-            // Transform data untuk menambahkan URL lengkap
-            $metodePembayaran = $metodePembayaran->map(function ($metode) {
-                $metode->logo = $metode->logo ? url(Storage::url($metode->logo)) : null;
-                $metode->qr_code = $metode->qr_code ? url(Storage::url($metode->qr_code)) : null;
-                return $metode;
-            });
-
+            // Get all payment methods except id_metode = 1
+            $metodePembayaran = metode_pembayaran::where('id_metode', '!=', 1)
+                ->get()
+                ->map(function ($metode) {
+                    // Transform URLs for logo and QR code
+                    $metode->logo = $metode->logo ? url(Storage::url($metode->logo)) : null;
+                    $metode->qr_code = $metode->qr_code ? url(Storage::url($metode->qr_code)) : null;
+                    return $metode;
+                });
+    
             return response()->json([
                 'status' => true,
                 'message' => 'Data metode pembayaran berhasil diambil',
@@ -29,7 +30,8 @@ class MetodePembayaranController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
-                'message' => 'Gagal mengambil data metode pembayaran'
+                'message' => 'Gagal mengambil data metode pembayaran',
+                'error' => $e->getMessage()
             ], 500);
         }
     }
