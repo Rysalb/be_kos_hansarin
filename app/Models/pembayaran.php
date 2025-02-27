@@ -25,6 +25,12 @@ class Pembayaran extends Model
         'bukti_pembayaran' => 'manual_entry.jpg' // Set default value
     ];
 
+
+    public function pesananMakanan()
+    {
+        return $this->hasMany(Pesanan_Makanan::class, 'id_pembayaran', 'id_pembayaran');
+    }
+    
     // Relasi dengan model Penyewa
     public function penyewa()
     {

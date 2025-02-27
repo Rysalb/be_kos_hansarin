@@ -16,13 +16,24 @@ class PembayaranController extends Controller
     // Mendapatkan semua data pembayaran
     public function getAll()
     {
-        $pembayaran = Pembayaran::with([
-            'penyewa.user',
-            'penyewa.unit_kamar',
-            'metodePembayaran'
-        ])->get();
-        
-        return response()->json($pembayaran, 200);
+        try {
+            $pembayaran = Pembayaran::with([
+                'penyewa.user',
+                'penyewa.unit_kamar',
+                'metodePembayaran',
+                'pesananMakanan.katalogMakanan'  // Add this relation
+            ])->orderBy('created_at', 'desc')->get();
+
+            return response()->json([
+                'status' => true,
+                'data' => $pembayaran
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Gagal mengambil data pembayaran'
+            ], 500);
+        }
     }
 
     // Mendapatkan detail pembayaran berdasarkan ID
@@ -117,52 +128,54 @@ class PembayaranController extends Controller
         try {
             DB::beginTransaction();
             
-            $pembayaran = Pembayaran::with(['penyewa.unit_kamar', 'metodePembayaran'])
-                ->findOrFail($id_pembayaran);
-                
+            $pembayaran = Pembayaran::with([
+                'penyewa.unit_kamar', 
+                'metodePembayaran',
+                'pesananMakanan.katalogMakanan' // Add relation to get order details
+            ])->findOrFail($id_pembayaran);
+            
             $pembayaran->status_verifikasi = $request->status_verifikasi;
-            $pembayaran->keterangan = $request->keterangan;
+            // Don't override the original keterangan
+            // $pembayaran->keterangan = $request->keterangan;
             $pembayaran->save();
     
-            // If verified, create pemasukan record
             if ($request->status_verifikasi === 'verified') {
-                // Get last transaction's saldo
                 $lastTransaction = Pemasukan_Pengeluaran::latest('id_transaksi')->first();
                 $lastSaldo = $lastTransaction ? $lastTransaction->saldo : 0;
-                
-                // Calculate new saldo
                 $newSaldo = $lastSaldo + $pembayaran->jumlah_pembayaran;
     
+                // Use original keterangan for kategori
+                $kategori = $pembayaran->keterangan == 'Order Menu' ? 'Order Menu' : 'Pembayaran Sewa';
+                
+                // Create transaction record with proper category
                 Pemasukan_Pengeluaran::create([
                     'jenis_transaksi' => 'pemasukan',
-                    'kategori' => 'Pembayaran Sewa',
+                    'kategori' => $kategori,
                     'jumlah' => $pembayaran->jumlah_pembayaran,
                     'tanggal' => $pembayaran->tanggal_pembayaran,
-                    'keterangan' => "Pembayaran sewa kamar " . 
-                        $pembayaran->penyewa->unit_kamar->nomor_kamar . 
-                        " - " . $pembayaran->penyewa->user->name,
+                    'keterangan' => $pembayaran->keterangan == 'Order Menu' 
+                        ? $this->generateOrderDetails($pembayaran->pesananMakanan)
+                        : "Pembayaran sewa kamar {$pembayaran->penyewa->unit_kamar->nomor_kamar}",
                     'id_pembayaran' => $id_pembayaran,
                     'id_penyewa' => $pembayaran->id_penyewa,
-                    'bulan' => now()->month,
-                    'tahun' => now()->year,
-                    'saldo' => $newSaldo // Use calculated saldo
+                    'saldo' => $newSaldo
                 ]);
             }
     
             DB::commit();
-            
-            return response()->json([
-                'status' => true,
-                'message' => 'Pembayaran berhasil diverifikasi'
-            ]);
+            return response()->json(['status' => true, 'message' => 'Pembayaran berhasil diverifikasi']);
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Verifikasi error: ' . $e->getMessage()); // Add logging
-            return response()->json([
-                'status' => false,
-                'message' => 'Gagal memverifikasi pembayaran: ' . $e->getMessage()
-            ], 500);
+            return response()->json(['status' => false, 'message' => 'Gagal memverifikasi: ' . $e->getMessage()]);
         }
+    }
+    
+    private function generateOrderDetails($pesananMakanan) {
+        $details = [];
+        foreach ($pesananMakanan as $pesanan) {
+            $details[] = "{$pesanan->jumlah}x {$pesanan->katalogMakanan->nama_makanan}";
+        }
+        return "Pembayaran Order Menu: " . implode(", ", $details);
     }
 
     public function upload(Request $request)
@@ -171,7 +184,8 @@ class PembayaranController extends Controller
             $request->validate([
                 'metode_pembayaran_id' => 'required|exists:metode_pembayaran,id_metode',
                 'bukti_pembayaran' => 'required|image|max:2048',
-                'jumlah_pembayaran' => 'required|numeric', // Add validation for jumlah_pembayaran
+                'jumlah_pembayaran' => 'required|numeric',
+                'keterangan' => 'required|string', // Add validation for keterangan
             ]);
 
             // Get penyewa ID from authenticated user
@@ -190,10 +204,11 @@ class PembayaranController extends Controller
                 'id_user' => $user->id_user,
                 'id_metode' => $request->metode_pembayaran_id,
                 'id_penyewa' => $penyewa->id_penyewa,
-                'jumlah_pembayaran' => $request->jumlah_pembayaran, // Add this field
+                'jumlah_pembayaran' => $request->jumlah_pembayaran,
                 'bukti_pembayaran' => $buktiPath,
                 'status_verifikasi' => 'pending',
                 'tanggal_pembayaran' => now(),
+                'keterangan' => $request->keterangan, // Save keterangan
             ]);
 
             return response()->json([

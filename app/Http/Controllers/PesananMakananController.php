@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Pesanan_Makanan;
 use App\Models\Katalog_Makanan;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PesananMakananController extends Controller
 {
@@ -26,28 +27,51 @@ class PesananMakananController extends Controller
 
     // Membuat pesanan baru
     public function create(Request $request)
-    {
+{
+    DB::beginTransaction();
+    try {
         $request->validate([
             'id_penyewa' => 'required|exists:penyewa,id_penyewa',
-            'id_makanan' => 'required|exists:katalog_makanan,id_makanan',
-            'jumlah' => 'required|integer|min:1',
+            'id_pembayaran' => 'required|exists:pembayaran,id_pembayaran',
+            'pesanan' => 'required|array',
+            'total_harga' => 'required|numeric',
         ]);
 
-        // Mengambil harga makanan dari katalog
-        $makanan = Katalog_Makanan::findOrFail($request->id_makanan);
-        $total_harga = $makanan->harga * $request->jumlah;
+        foreach ($request->pesanan as $item) {
+            $makanan = Katalog_Makanan::findOrFail($item['id_makanan']);
+            
+            if ($makanan->stock < $item['jumlah']) {
+                throw new \Exception("Stok {$makanan->nama_makanan} tidak mencukupi");
+            }
 
-        $pesanan = Pesanan_Makanan::create([
-            'id_penyewa' => $request->id_penyewa,
-            'id_makanan' => $request->id_makanan,
-            'jumlah' => $request->jumlah,
-            'total_harga' => $total_harga,
-            'status_pesanan' => 'pending'
-        ]);
+            // Reduce stock
+            $makanan->stock -= $item['jumlah'];
+            $makanan->save();
 
-        return response()->json($pesanan, 201);
+            // Create order
+            Pesanan_Makanan::create([
+                'id_penyewa' => $request->id_penyewa,
+                'id_pembayaran' => $request->id_pembayaran,
+                'id_makanan' => $item['id_makanan'],
+                'jumlah' => $item['jumlah'],
+                'total_harga' => $item['total_harga'],
+                'status_pesanan' => 'pending'
+            ]);
+        }
+
+        DB::commit();
+        return response()->json([
+            'message' => 'Pesanan berhasil dibuat',
+            'status' => true
+        ], 201);
+    } catch (\Exception $e) {
+        DB::rollback();
+        return response()->json([
+            'message' => $e->getMessage(),
+            'status' => false
+        ], 400);
     }
-
+}
     // Mengupdate status pesanan
     public function updateStatus(Request $request, $id_pesanan)
     {

@@ -240,43 +240,52 @@ public function verifikasiUser(Request $request, $userId)
 
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required'
-        ]);
-
-        if (Auth::attempt($credentials)) {
-            $user = Auth::user();
-            
-            // Cek jika user dengan role 'user' masih pending
-            if ($user->role === 'user' && $user->status_verifikasi === 'pending') {
-                Auth::logout(); // Logout user
+        try {
+            $validator = Validator::make($request->all(), [
+                'email' => 'required|email',
+                'password' => 'required',
+            ]);
+    
+            if ($validator->fails()) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Akun Anda masih dalam proses verifikasi admin'
+                    'message' => 'Validation Error',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+    
+            if (!Auth::attempt($request->only('email', 'password'))) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Email atau password salah'
                 ], 401);
             }
-
-            // Jika verifikasi sudah disetujui atau role admin, lanjutkan proses login
-            $token = $user->createToken('auth_token')->plainTextToken;
-
+    
+            $user = User::where('email', $request->email)->first();
+            $token = $user->createToken('auth-token')->plainTextToken;
+    
+            // Get penyewa data if user is not admin
+            $penyewa = null;
+            if ($user->role === 'user') {
+                $penyewa = Penyewa::where('id_user', $user->id_user)
+                    ->first();
+            }
+    
             return response()->json([
                 'status' => true,
-                'message' => 'Login successful',
+                'message' => 'Login berhasil',
                 'token' => $token,
-                'user' => [
-                    'id' => $user->id_user,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'role' => $user->role,
-                ]
+                'user' => $user,
+                'penyewa' => $penyewa
             ]);
+    
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Login gagal',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'status' => false,
-            'message' => 'Invalid credentials'
-        ], 401);
     }
 
     public function logout(Request $request)

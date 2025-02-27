@@ -146,6 +146,7 @@ Route::prefix('kamar')->group(function () {
 
 Route::prefix('metode-pembayaran')->group(function () {
     Route::get('/', [MetodePembayaranController::class, 'index']);
+    Route::get('/{id}', [MetodePembayaranController::class, 'show']); // Add this line
     Route::post('/create', [MetodePembayaranController::class, 'store']);
     Route::delete('/delete/{id}', [MetodePembayaranController::class, 'destroy']);
     Route::post('/update/{id}', [MetodePembayaranController::class, 'update']);
