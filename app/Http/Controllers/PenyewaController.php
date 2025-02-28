@@ -115,7 +115,7 @@ class PenyewaController extends Controller
             // Validasi input
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string',
-                'email' => 'required|email|unique:users',
+                'email' => 'required|email|unique:users,email',
                 'password' => 'required|min:8',
                 'id_unit' => 'required|exists:unit_kamar,id_unit',
                 'nik' => 'required|string|size:16',
@@ -125,6 +125,8 @@ class PenyewaController extends Controller
                 'tanggal_masuk' => 'required|date_format:Y-m-d',
                 'durasi_sewa' => 'required|integer',
                 'harga_sewa' => 'required|numeric',
+            ], [
+                'email.unique' => 'Email sudah digunakan'
             ]);
 
             if ($validator->fails()) {

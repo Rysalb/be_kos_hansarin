@@ -21,6 +21,16 @@ class AuthController extends Controller
 {
     public function register(Request $request)
 {
+    // Cek email terlebih dahulu sebelum validasi lainnya
+    $emailExists = User::where('email', $request->email)->exists();
+    if ($emailExists) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Email sudah terdaftar. Silakan gunakan email lain.',
+            'type' => 'email_exists'
+        ], 422);
+    }
+
     $validator = Validator::make($request->all(), [
         'name' => 'required|string|max:255',
         'email' => 'required|string|email|max:255|unique:users',
@@ -249,26 +259,49 @@ public function verifikasiUser(Request $request, $userId)
             if ($validator->fails()) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Validation Error',
-                    'errors' => $validator->errors()
+                    'message' => 'Email dan password harus diisi'
                 ], 422);
             }
     
-            if (!Auth::attempt($request->only('email', 'password'))) {
+            // Check if user exists first
+            $user = User::where('email', $request->email)->first();
+            if (!$user) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Email atau password salah'
+                    'message' => 'Email yang Anda masukkan tidak terdaftar'
                 ], 401);
             }
     
-            $user = User::where('email', $request->email)->first();
+            // Check password before verification status
+            if (!Hash::check($request->password, $user->password)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Password yang Anda masukkan salah'
+                ], 401);
+            }
+    
+            // Check verification status for regular users
+            if ($user->role === 'user') {
+                if ($user->status_verifikasi === 'pending') {
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Akun Anda masih dalam proses verifikasi admin'
+                    ], 403);
+                } else if ($user->status_verifikasi === 'ditolak') {
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Akun Anda telah ditolak oleh admin'
+                    ], 403);
+                }
+            }
+    
+            // If all checks pass, create token and login
             $token = $user->createToken('auth-token')->plainTextToken;
     
-            // Get penyewa data if user is not admin
+            // Get penyewa data for regular users
             $penyewa = null;
             if ($user->role === 'user') {
-                $penyewa = Penyewa::where('id_user', $user->id_user)
-                    ->first();
+                $penyewa = Penyewa::where('id_user', $user->id_user)->first();
             }
     
             return response()->json([
@@ -282,8 +315,7 @@ public function verifikasiUser(Request $request, $userId)
         } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
-                'message' => 'Login gagal',
-                'error' => $e->getMessage()
+                'message' => 'Terjadi kesalahan saat login'
             ], 500);
         }
     }
