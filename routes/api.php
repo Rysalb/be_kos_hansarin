@@ -51,6 +51,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/pembayaran/upload', [PembayaranController::class, 'upload']);
     Route::get('/pembayaran/histori', [PembayaranController::class, 'histori']);
+    Route::get('/penyewa/kamar-detail', [PenyewaController::class, 'getUserKamarDetail']);
 });
 
 // route kamar

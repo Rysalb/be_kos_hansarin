@@ -387,4 +387,53 @@ class PenyewaController extends Controller
         ], 400);
     }
 }
+
+
+public function getUserKamarDetail(Request $request)
+{
+    try {
+        // Get authenticated user
+        $user = auth()->user();
+        
+        // Get penyewa data with relations
+        $penyewa = Penyewa::with(['unit_kamar.kamar'])
+            ->where('id_user', $user->id_user)
+            ->first();
+
+        if (!$penyewa || !$penyewa->unit_kamar || !$penyewa->unit_kamar->kamar) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Data kamar tidak ditemukan'
+            ], 404);
+        }
+
+        $kamar = $penyewa->unit_kamar->kamar;
+        
+        // Return formatted response
+        return response()->json([
+            'status' => true,
+            'data' => [
+                'unit_kamar' => [
+                    'id_unit' => $penyewa->unit_kamar->id_unit,
+                    'nomor_kamar' => $penyewa->unit_kamar->nomor_kamar,
+                    'kamar' => [
+                        'id_kamar' => $kamar->id_kamar,
+                        'harga_sewa' => $kamar->harga_sewa,
+                        'harga_sewa1' => $kamar->harga_sewa1,
+                        'harga_sewa2' => $kamar->harga_sewa2,
+                        'harga_sewa3' => $kamar->harga_sewa3,
+                        'harga_sewa4' => $kamar->harga_sewa4
+                    ]
+                ]
+            ]
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Error in getUserKamarDetail: ' . $e->getMessage());
+        return response()->json([
+            'status' => false,
+            'message' => 'Gagal memuat detail kamar',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
 }
