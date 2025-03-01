@@ -123,12 +123,19 @@ class AuthController extends Controller
 public function verifikasiUser(Request $request, $userId)
 {
     try {
-        $validator = Validator::make($request->all(), [
+        // Different validation rules based on status
+        $rules = [
             'status' => 'required|in:disetujui,ditolak',
-            'tanggal_masuk' => 'required_if:status,disetujui|date',
-            'durasi_sewa' => 'required_if:status,disetujui|integer',
-            'harga_sewa' => 'required_if:status,disetujui|numeric',
-        ]);
+        ];
+
+        // Only add these validations if status is 'disetujui'
+        if ($request->status === 'disetujui') {
+            $rules['tanggal_masuk'] = 'required|date';
+            $rules['durasi_sewa'] = 'required|integer';
+            $rules['harga_sewa'] = 'required|numeric';
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             return response()->json([
@@ -147,7 +154,7 @@ public function verifikasiUser(Request $request, $userId)
         $user->save();
 
         if ($request->status === 'disetujui') {
-            // Update data penyewa
+            // Update data penyewa only if approved
             $penyewa->update([
                 'tanggal_masuk' => $request->tanggal_masuk,
                 'durasi_sewa' => $request->durasi_sewa,
@@ -157,30 +164,11 @@ public function verifikasiUser(Request $request, $userId)
                 'harga_sewa' => $request->harga_sewa
             ]);
 
-            // Update status unit kamar
+            // Update unit status
             Unit_Kamar::where('id_unit', $penyewa->id_unit)
-                     ->update(['status' => 'dihuni']);
-
-            // Catat pembayaran di pemasukan_pengeluaran
-            $pemasukanPengeluaran = new Pemasukan_Pengeluaran([
-                'jenis_transaksi' => 'pemasukan',
-                'kategori' => 'Pembayaran Sewa',
-                'tanggal' => $request->tanggal_masuk,
-                'jumlah' => $request->harga_sewa,
-                'keterangan' => "Pembayaran sewa kamar {$penyewa->unit_kamar->nomor_kamar} - {$user->name} [ID Penyewa: {$penyewa->id_penyewa}]",
-                'bulan' => Carbon::parse($request->tanggal_masuk)->month,
-                'tahun' => Carbon::parse($request->tanggal_masuk)->year,
-                'id_penyewa' => $penyewa->id_penyewa
-            ]);
-
-            // Hitung saldo
-            $lastTransaction = Pemasukan_Pengeluaran::latest('id_transaksi')->first();
-            $currentSaldo = $lastTransaction ? $lastTransaction->saldo : 0;
-            $pemasukanPengeluaran->saldo = $currentSaldo + $request->harga_sewa;
-            
-            $pemasukanPengeluaran->save();
+                ->update(['status' => 'dihuni']);
         } else {
-            // Jika ditolak, hapus data penyewa
+            // If rejected, delete penyewa data
             Storage::delete(str_replace('storage/', 'public/', $penyewa->foto_ktp));
             $penyewa->delete();
         }
