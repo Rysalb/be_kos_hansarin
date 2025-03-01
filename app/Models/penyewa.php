@@ -32,4 +32,9 @@ class Penyewa extends Model
     {
         return $this->belongsTo(Unit_Kamar::class, 'id_unit', 'id_unit');
     }
+
+    public function pembayaran()
+    {
+        return $this->hasMany(Pembayaran::class, 'id_penyewa', 'id_penyewa');
+    }
 }

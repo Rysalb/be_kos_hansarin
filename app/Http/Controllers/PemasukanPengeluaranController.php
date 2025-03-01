@@ -108,7 +108,9 @@ class PemasukanPengeluaranController extends Controller
                 'id_penyewa' => 'nullable|exists:penyewa,id_penyewa',
                 'id_user' => 'nullable|exists:users,id_user',
                 'id_metode' => 'nullable',
-                'bukti_pembayaran' => 'nullable'
+                'bukti_pembayaran' => 'nullable',
+                'durasi' => 'nullable|integer',           // Add validation
+                'tanggal_keluar' => 'nullable|date',     // Add validation
             ]);
     
             // Calculate saldo
@@ -144,6 +146,20 @@ if ($validated['kategori'] === 'Pembayaran Sewa' && $validated['id_penyewa']) {
                 'id_pembayaran' => $pembayaran->id_pembayaran ?? null,
                 'saldo' => $newSaldo
             ]);
+
+            // If this is a rent payment and has durasi & tanggal_keluar
+            if ($validated['kategori'] == 'Pembayaran Sewa' && 
+                isset($validated['durasi']) && 
+                isset($validated['tanggal_keluar']) &&
+                isset($validated['id_penyewa'])) {
+                
+                // Update penyewa's tanggal_keluar
+                Penyewa::where('id_penyewa', $validated['id_penyewa'])
+                       ->update([
+                           'tanggal_keluar' => $validated['tanggal_keluar'],
+                           'durasi_sewa' => $validated['durasi']
+                       ]);
+            }
     
             DB::commit();
     

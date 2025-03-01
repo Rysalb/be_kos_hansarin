@@ -17,6 +17,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;  
 use App\Models\Pemasukan_Pengeluaran;
 
+
 class AuthController extends Controller
 {
     public function register(Request $request)
@@ -471,7 +472,16 @@ public function getProfile(Request $request)
         }
         
         // Jika user adalah penyewa
-        $penyewa = $user->penyewa()->with(['unit_kamar.kamar'])->first();
+        $penyewa = $user->penyewa()
+            ->with(['unit_kamar.kamar'])
+            ->with(['pembayaran' => function($query) {
+                $query->select('id_pembayaran', 'id_penyewa', 'tanggal_pembayaran', 'status_verifikasi')
+                      ->where('status_verifikasi', 'verified')
+                      ->orderBy('tanggal_pembayaran', 'desc')
+                      ->limit(1);
+            }])
+            ->first();
+
         if (!$penyewa) {
             return response()->json([
                 'status' => true,
@@ -484,6 +494,9 @@ public function getProfile(Request $request)
                 ]
             ]);
         }
+        
+        // Get latest payment date
+        $latestPayment = $penyewa->pembayaran->first();
         
         return response()->json([
             'status' => true,
@@ -498,7 +511,8 @@ public function getProfile(Request $request)
                 'status_penyewa' => $penyewa->status_penyewa,
                 'nomor_kamar' => $penyewa->unit_kamar->nomor_kamar ?? null,
                 'tipe_kamar' => $penyewa->unit_kamar->kamar->tipe_kamar ?? null,
-                'nomor_wa' => $penyewa->nomor_wa
+                'nomor_wa' => $penyewa->nomor_wa,
+                'pembayaran_terakhir' => $latestPayment ? $latestPayment->tanggal_pembayaran : null
             ]
         ]);
     } catch (Exception $e) {
