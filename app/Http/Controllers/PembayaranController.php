@@ -151,8 +151,6 @@ class PembayaranController extends Controller
             ])->findOrFail($id_pembayaran);
             
             $pembayaran->status_verifikasi = $request->status_verifikasi;
-            // Don't override the original keterangan
-            // $pembayaran->keterangan = $request->keterangan;
             $pembayaran->save();
     
             if ($request->status_verifikasi === 'verified') {
@@ -176,6 +174,15 @@ class PembayaranController extends Controller
                     'id_penyewa' => $pembayaran->id_penyewa,
                     'saldo' => $newSaldo
                 ]);
+
+                // Add this new code block for updating checkout date
+                if ($kategori === 'Pembayaran Sewa' && $request->durasi && $request->tanggal_keluar) {
+                    $penyewa = $pembayaran->penyewa;
+                    $penyewa->update([
+                        'durasi_sewa' => $request->durasi,
+                        'tanggal_keluar' => $request->tanggal_keluar
+                    ]);
+                }
 
                 // After successful verification
                 $notificationController = app()->make(NotificationsController::class);
