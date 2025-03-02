@@ -16,6 +16,7 @@ use Exception;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;  
 use App\Models\Pemasukan_Pengeluaran;
+use App\Models\Notification;
 
 
 class AuthController extends Controller
@@ -94,6 +95,20 @@ class AuthController extends Controller
         $penyewa->status_penyewa = 'tidak_aktif';
         $penyewa->save();
 
+        // Setelah penyewa berhasil didaftarkan (sebelum DB::commit())
+        // Kirim notifikasi ke semua admin
+        $admins = User::where('role', 'admin')->get();
+        foreach ($admins as $admin) {
+            $notificationController = app()->make(NotificationsController::class);
+            $notificationController->sendNotification(
+                $admin->id_user,
+                'Pendaftaran Penyewa Baru',
+                "Penyewa baru {$request->name} memerlukan verifikasi untuk kamar {$unit->nomor_kamar}",
+                'tenant_registration',
+                ['id_user' => $user->id_user]
+            );
+        }
+
         DB::commit();
 
         $token = $user->createToken('auth-token')->plainTextToken;
@@ -168,6 +183,16 @@ public function verifikasiUser(Request $request, $userId)
             // Update unit status
             Unit_Kamar::where('id_unit', $penyewa->id_unit)
                 ->update(['status' => 'dihuni']);
+
+            // After successful verification
+            $notificationController = app()->make(NotificationsController::class);
+            $notificationController->sendNotification(
+                $userId,
+                'Verifikasi Akun',
+                "Akun Anda telah diverifikasi. Selamat datang di Kos SidoRame12!",
+                'tenant_verification',
+                ['id_user' => $userId]
+            );
         } else {
             // If rejected, delete penyewa data
             Storage::delete(str_replace('storage/', 'public/', $penyewa->foto_ktp));

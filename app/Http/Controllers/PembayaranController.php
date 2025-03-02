@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 use App\Models\Pemasukan_Pengeluaran;
+use App\Models\User;
+use App\Models\Notification;
 
 class PembayaranController extends Controller
 {
@@ -72,6 +74,20 @@ class PembayaranController extends Controller
             'status_verifikasi' => $request->status_verifikasi,
             'keterangan' => $request->keterangan
         ]);
+
+        // Setelah pembayaran berhasil dibuat
+        // Kirim notifikasi ke semua admin
+        $admins = User::where('role', 'admin')->get();
+        foreach ($admins as $admin) {
+            $notificationController = app()->make(NotificationsController::class);
+            $notificationController->sendNotification(
+                $admin->id_user,
+                'Pembayaran Baru',
+                "Pembayaran baru dari {$pembayaran->penyewa->user->name} perlu diverifikasi",
+                'payment_verification',
+                ['id_pembayaran' => $pembayaran->id_pembayaran]
+            );
+        }
 
         return response()->json($pembayaran, 201);
     }
@@ -160,6 +176,16 @@ class PembayaranController extends Controller
                     'id_penyewa' => $pembayaran->id_penyewa,
                     'saldo' => $newSaldo
                 ]);
+
+                // After successful verification
+                $notificationController = app()->make(NotificationsController::class);
+                $notificationController->sendNotification(
+                    $pembayaran->penyewa->user->id_user,
+                    'Pembayaran Diverifikasi',
+                    "Pembayaran untuk kamar {$pembayaran->penyewa->unit_kamar->nomor_kamar} telah diverifikasi",
+                    'payment_verification',
+                    ['id_pembayaran' => $pembayaran->id_pembayaran]
+                );
             }
     
             DB::commit();
