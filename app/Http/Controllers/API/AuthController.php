@@ -17,6 +17,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;  
 use App\Models\Pemasukan_Pengeluaran;
 use App\Models\Notification;
+use App\Http\Controllers\NotificationsController;
 
 
 class AuthController extends Controller
