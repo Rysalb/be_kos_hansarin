@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use DateTimeInterface; 
 
 class Pembayaran extends Model
 {
@@ -45,5 +46,10 @@ class Pembayaran extends Model
     public function metodePembayaran()
     {
         return $this->belongsTo(metode_pembayaran::class, 'id_metode', 'id_metode');
+    }
+
+    protected function serializeDate(DateTimeInterface $date)
+    {
+        return $date->setTimezone('Asia/Jakarta')->format('Y-m-d H:i:s');
     }
 }
