@@ -166,6 +166,7 @@ public function verifikasiUser(Request $request, $userId)
 
         $user = User::findOrFail($userId);
         $penyewa = Penyewa::where('id_user', $userId)->firstOrFail();
+        $unitKamar = Unit_Kamar::find($penyewa->id_unit);
 
         $user->status_verifikasi = $request->status;
         $user->save();
@@ -184,6 +185,26 @@ public function verifikasiUser(Request $request, $userId)
             // Update unit status
             Unit_Kamar::where('id_unit', $penyewa->id_unit)
                 ->update(['status' => 'dihuni']);
+                
+            // Tambahkan pembayaran di Pemasukan_Pengeluaran - KODE BARU
+            $keterangan = 'Pembayaran sewa kamar ' . $unitKamar->nomor_kamar . ' - ' . $user->name . ' (' . $request->durasi_sewa . ' bulan)';
+            
+            // Hitung saldo
+            $lastTransaction = Pemasukan_Pengeluaran::latest('id_transaksi')->first();
+            $lastSaldo = $lastTransaction ? $lastTransaction->saldo : 0;
+            $newSaldo = $lastSaldo + $request->harga_sewa;
+            
+            // Buat record pemasukan
+            Pemasukan_Pengeluaran::create([
+                'jenis_transaksi' => 'pemasukan',
+                'kategori' => 'Pembayaran Sewa',
+                'jumlah' => $request->harga_sewa,
+                'tanggal' => $request->tanggal_masuk,
+                'keterangan' => $keterangan,
+                'id_penyewa' => $penyewa->id_penyewa,
+                'saldo' => $newSaldo,
+                // Tidak ada id_pembayaran karena ini pembayaran awal
+            ]);
 
             // After successful verification
             $notificationController = app()->make(NotificationsController::class);
