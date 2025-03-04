@@ -10,16 +10,16 @@ class ResetPasswordMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $resetUrl;
+    public $url;
 
     public function __construct($resetUrl)
     {
-        $this->resetUrl = $resetUrl;
+        $this->url = $resetUrl;
     }
 
     public function build()
     {
         return $this->markdown('emails.reset-password')
-                    ->subject('Reset Password');
+                    ->subject('Reset Password - Kos SidoRame12');
     }
 } 
