@@ -16,23 +16,22 @@ use Illuminate\Support\Facades\Config;
 
 class PasswordResetController extends Controller
 {
-    // For authenticated users
+    // Untuk pengguna terautentikasi
     public function sendResetLinkEmail(Request $request)
     {
-        // Your existing method for authenticated users
         try {
             $user = auth()->user();
             
             // Generate token
             $token = Password::createToken($user);
             
-            // Create reset URL
+            // Buat URL reset
             $resetUrl = url(route('password.reset', [
                 'token' => $token,
                 'email' => $user->email,
             ], false));
 
-            // Send email
+            // Kirim email
             Mail::to($user->email)->send(new ResetPasswordMail($resetUrl));
 
             return response()->json([
@@ -48,7 +47,7 @@ class PasswordResetController extends Controller
         }
     }
     
-    // For public users (not authenticated)
+    // Untuk pengguna publik (tidak terautentikasi)
     public function forgotPassword(Request $request)
     {
         \Log::info('Received forgot password request', ['email' => $request->email]);
@@ -65,7 +64,7 @@ class PasswordResetController extends Controller
                 'errors' => $validator->errors()
             ], 422);
         }
-        
+
         $user = User::where('email', $request->email)->first();
         
         if (!$user) {
@@ -76,7 +75,6 @@ class PasswordResetController extends Controller
             ], 404);
         }
         
-        // Simplified try-catch block that will work better with SSL issues
         try {
             // Generate token
             $token = Password::createToken($user);
@@ -84,10 +82,10 @@ class PasswordResetController extends Controller
             // Ubah URL yang dikirim di email
             $resetUrl = route('password.reset', ['token' => $token, 'email' => $request->email]);
             
-            // Log the info
+            // Log informasi
             \Log::info('Reset URL created', ['url' => $resetUrl]);
             
-            // Setup transport manually with SSL options
+            // Setup transport dengan opsi SSL
             Config::set('mail.mailers.smtp.stream_options', [
                 'ssl' => [
                     'verify_peer' => false,
@@ -96,7 +94,7 @@ class PasswordResetController extends Controller
                 ],
             ]);
             
-            // Log before sending email
+            // Log informasi sebelum mengirim email
             \Log::info('Attempting to send email via: ' . config('mail.default') . ' driver', [
                 'host' => config('mail.mailers.smtp.host'),
                 'port' => config('mail.mailers.smtp.port'),
@@ -104,11 +102,7 @@ class PasswordResetController extends Controller
                 'username' => config('mail.mailers.smtp.username'),
             ]);
             
-            // Try using log driver for debugging
-            // Comment this line if you want to use SMTP only
-            // Config::set('mail.default', 'log');
-            
-            // Send email
+            // Kirim email
             Mail::to($user->email)->send(new ResetPasswordMail($resetUrl));
             
             \Log::info('Email sent successfully');
@@ -129,22 +123,29 @@ class PasswordResetController extends Controller
                 ]
             ]);
             
-            // Provide more user-friendly message
-            return response()->json([
-                'status' => false,
-                'message' => 'Gagal mengirim link reset password. Mohon coba beberapa saat lagi.',
-                'debug_info' => APP_DEBUG ? [
+            // Berikan pesan yang lebih ramah pengguna
+            $debugInfo = null;
+            if (config('app.debug')) {
+                $debugInfo = [
                     'error' => $e->getMessage(),
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
-                ] : null
+                ];
+            }
+            
+            return response()->json([
+                'status' => false,
+                'message' => 'Gagal mengirim link reset password. Mohon coba beberapa saat lagi.',
+                'debug_info' => $debugInfo
             ], 500);
         }
     }
     
-    // For resetting password with token
+    // Untuk reset password dengan token
     public function resetPassword(Request $request)
     {
+        \Log::info('Reset password request received', $request->all());
+        
         $validator = Validator::make($request->all(), [
             'token' => 'required',
             'email' => 'required|email',
@@ -169,6 +170,8 @@ class PasswordResetController extends Controller
                 $user->save();
                 
                 event(new PasswordReset($user));
+                
+                \Log::info('Password reset successful for user: ' . $user->email);
             }
         );
         
@@ -178,6 +181,8 @@ class PasswordResetController extends Controller
                 'message' => 'Password berhasil direset'
             ]);
         }
+        
+        \Log::error('Password reset failed with status: ' . $status);
         
         return response()->json([
             'status' => false,
