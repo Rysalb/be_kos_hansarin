@@ -81,11 +81,8 @@ class PasswordResetController extends Controller
             // Generate token
             $token = Password::createToken($user);
             
-            // Buat URL yang kompatibel dengan route yang telah dimodifikasi
-            $resetUrl = url(route('password.reset', [
-                'token' => $token,
-                'email' => $request->email,
-            ], false));
+            // Ubah URL yang dikirim di email
+            $resetUrl = route('password.reset', ['token' => $token, 'email' => $request->email]);
             
             // Log the info
             \Log::info('Reset URL created', ['url' => $resetUrl]);

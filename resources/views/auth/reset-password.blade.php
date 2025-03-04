@@ -6,10 +6,11 @@
 
         <x-validation-errors class="mb-4" />
 
+        <!-- FIX: Gunakan URL yang benar tanpa token di action -->
         <form method="POST" action="{{ route('password.update') }}">
             @csrf
 
-            <!-- Gunakan input hidden untuk token daripada mengakses dari request->route() -->
+            <!-- Token tetap digunakan sebagai hidden input -->
             <input type="hidden" name="token" value="{{ $token }}">
 
             <div class="block">
@@ -28,7 +29,7 @@
             </div>
 
             <div class="flex items-center justify-end mt-4">
-                <x-button>
+                <x-button type="submit">
                     {{ __('Reset Password') }}
                 </x-button>
             </div>
